@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retta — Panel de Complejos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --accent:       #8FCC00;
+  --accent-bright:#C8F247;
+  --accent-dim:   rgba(143,204,0,0.12);
+  --accent-dark:  rgba(143,204,0,0.25);
+  --bg:           #0A0A0A;
+  --surface:      #111111;
+  --surface2:     #181818;
+  --surface3:     #222222;
+  --border:       rgba(255,255,255,0.07);
+  --border2:      rgba(255,255,255,0.13);
+  --txt:          #F2F1EF;
+  --txt2:         rgba(242,241,239,0.55);
+  --txt3:         rgba(242,241,239,0.28);
+  --green:        #2E9E50;
+  --green-light:  rgba(46,158,80,0.1);
+  --blue:         #1A6DB5;
+  --blue-light:   rgba(26,109,181,0.12);
+  --yellow:       #C47A00;
+  --red:          #C23B2B;
+  --red-light:    rgba(194,59,43,0.08);
+  --font-display: 'Outfit', sans-serif;
+  --font-body:    'Plus Jakarta Sans', sans-serif;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
+}
+
+/* ─── CONFIG API ─────────────────────────────── */
+/* Cambia estos valores con los tuyos de Supabase */
+/* y la URL de tu backend Railway/Render          */
+
+html, body { height:100%; font-family:var(--font-body); background:var(--bg); color:var(--txt); overflow:hidden; }
+
+/* ── LOGIN ── */
+#login-screen {
+  position:fixed; inset:0; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; z-index:100;
+}
+.login-card { width:380px; }
+.login-logo-wrap { display:flex; flex-direction:column; align-items:center; margin-bottom:36px; }
+.login-badge {
+  width:90px; height:90px; background:#000; border-radius:18px;
+  display:flex; align-items:center; justify-content:center;
+  margin-bottom:18px;
+}
+.login-badge svg { width:36px; height:36px; }
+.login-title {
+  font-family:var(--font-display); font-size:28px; font-weight:900;
+  letter-spacing:.12em; text-transform:uppercase; color:#fff; line-height:1;
+}
+.login-subtitle {
+  font-family:var(--font-display); font-size:11px; font-weight:700;
+  letter-spacing:.22em; text-transform:uppercase; color:var(--txt3); margin-top:4px;
+}
+.login-form { display:flex; flex-direction:column; gap:12px; }
+.login-label {
+  font-family:var(--font-display); font-size:11px; font-weight:800;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--txt3);
+}
+.login-input {
+  height:48px; background:rgba(255,255,255,0.05);
+  border:1px solid var(--border2); border-radius:10px;
+  padding:0 16px; font-family:var(--font-body); font-size:14px; color:var(--txt);
+  outline:none; transition:border-color .2s, background .2s; width:100%;
+}
+.login-input::placeholder { color:var(--txt3); }
+.login-input:focus { border-color:rgba(143,204,0,.5); background:var(--accent-dim); }
+.login-btn {
+  height:52px; background:var(--accent); border:none; border-radius:10px; cursor:pointer;
+  font-family:var(--font-display); font-size:15px; font-weight:800;
+  letter-spacing:.18em; text-transform:uppercase; color:#000;
+  transition:background .2s; margin-top:4px; width:100%;
+}
+.login-btn:hover { background:var(--accent-bright); }
+.login-btn:disabled { opacity:.5; cursor:not-allowed; }
+.login-error {
+  font-family:var(--font-body); font-size:12px; color:#FF6B6B;
+  text-align:center; min-height:18px; margin-top:4px;
+}
+.login-hint {
+  font-family:var(--font-body); font-size:11px;
+  color:var(--txt3); text-align:center; margin-top:10px; line-height:1.6;
+}
+
+/* ── APP LAYOUT ── */
+.app { display:flex; height:100vh; overflow:hidden; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width:220px; background:var(--surface); flex-shrink:0;
+  border-right:1px solid var(--border); display:flex; flex-direction:column;
+}
+.sidebar-logo {
+  padding:24px 20px 20px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px;
+}
+.s-badge {
+  width:34px; height:34px; background:var(--accent);
+  border-radius:9px; display:flex; align-items:center; justify-content:center;
+}
+.s-badge svg { width:18px; height:18px; }
+.s-brand-name {
+  font-family:var(--font-display); font-size:16px; font-weight:900;
+  letter-spacing:.1em; text-transform:uppercase; color:#fff; line-height:1;
+}
+.s-brand-sub {
+  font-family:var(--font-display); font-size:9px; font-weight:700;
+  letter-spacing:.2em; text-transform:uppercase; color:var(--txt3);
+}
+.sidebar-nav { flex:1; padding:12px 10px; overflow-y:auto; }
+.nav-section-label {
+  font-family:var(--font-display); font-size:9px; font-weight:800;
+  letter-spacing:.22em; text-transform:uppercase; color:var(--txt3);
+  padding:10px 10px 6px; display:block;
+}
+.nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 12px; border-radius:8px; cursor:pointer;
+  transition:background .15s; text-decoration:none; margin-bottom:2px;
+}
+.nav-item:hover { background:rgba(255,255,255,0.05); }
+.nav-item.active { background:var(--accent-dim); }
+.nav-icon {
+  width:30px; height:30px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; background:rgba(255,255,255,0.06);
+}
+.nav-item.active .nav-icon { background:var(--accent-dark); }
+.nav-label {
+  font-family:var(--font-display); font-size:13px; font-weight:800;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--txt2); line-height:1;
+}
+.nav-item.active .nav-label { color:var(--accent-bright); }
+.nav-badge {
+  margin-left:auto; background:var(--accent); border-radius:20px;
+  min-width:18px; height:18px; display:flex; align-items:center; justify-content:center;
+  padding:0 5px; font-family:var(--font-display); font-size:9px; color:#000; font-weight:700;
+}
+.sidebar-bottom { border-top:1px solid var(--border); padding:14px; }
+.sb-user {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px; border-radius:8px; cursor:pointer; transition:background .15s;
+}
+.sb-user:hover { background:rgba(255,255,255,0.05); }
+.sb-avatar {
+  width:32px; height:32px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-size:13px; font-weight:900; color:#000;
+  flex-shrink:0;
+}
+.sb-name {
+  font-family:var(--font-display); font-size:13px; font-weight:800;
+  color:#fff; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sb-role { font-family:var(--font-body); font-size:10px; color:var(--txt3); margin-top:1px; }
+.sb-logout {
+  background:none; border:none; cursor:pointer; color:var(--txt3);
+  padding:4px; transition:color .15s; margin-left:auto;
+}
+.sb-logout:hover { color:var(--accent); }
+
+/* ── MAIN ── */
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.topbar {
+  height:60px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:16px;
+  padding:0 28px; flex-shrink:0; background:var(--surface);
+}
+.topbar-title {
+  font-family:var(--font-display); font-size:20px; font-weight:900;
+  letter-spacing:.06em; text-transform:uppercase; color:#fff;
+}
+.topbar-sub { font-family:var(--font-body); font-size:12px; color:var(--txt3); margin-left:2px; }
+.topbar-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.live-pill {
+  display:flex; align-items:center; gap:6px;
+  background:var(--accent-dim); border:1px solid rgba(143,204,0,0.2);
+  border-radius:20px; padding:4px 10px;
+}
+.live-dot {
+  width:7px; height:7px; border-radius:50%; background:var(--accent);
+  animation:pulse 1.6s ease infinite;
+}
+.live-text { font-family:var(--font-display); font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); }
+
+/* ── SCREENS ── */
+.screen { display:none; flex:1; overflow-y:auto; }
+.screen.active { display:block; }
+.content { padding:24px 28px; }
+
+/* ── STATS ── */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+.stat-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; padding:18px 20px; position:relative; overflow:hidden;
+  animation:slideUp .4s cubic-bezier(.22,1,.36,1) both;
+}
+.stat-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:var(--accent-color, var(--accent));
+}
+.stat-num {
+  font-family:var(--font-display); font-size:32px; font-weight:900;
+  color:#fff; letter-spacing:-.01em; line-height:1; margin:8px 0 4px;
+}
+.stat-label {
+  font-family:var(--font-display); font-size:10px; font-weight:800;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--txt3);
+}
+.stat-delta {
+  font-family:var(--font-display); font-size:11px; font-weight:700;
+  color:var(--green); margin-top:6px;
+}
+
+/* ── SECTION HEADER ── */
+.section-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:16px;
+}
+.section-title {
+  font-family:var(--font-display); font-size:13px; font-weight:800;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--txt2);
+}
+
+/* ── CANCHA CARDS ── */
+.three-col { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.cancha-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; overflow:hidden;
+  animation:slideUp .4s .1s cubic-bezier(.22,1,.36,1) both;
+}
+.cancha-header {
+  padding:12px 16px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:8px;
+}
+.cancha-color { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.cancha-name { font-family:var(--font-display); font-size:13px; font-weight:800; color:#fff; letter-spacing:.04em; flex:1; }
+.cancha-type { font-family:var(--font-body); font-size:10px; color:var(--txt3); }
+.cancha-body { padding:10px 0; }
+.slot-row {
+  display:flex; align-items:center; gap:10px;
+  padding:6px 16px; cursor:pointer; transition:background .15s;
+}
+.slot-row:hover { background:rgba(255,255,255,0.03); }
+.slot-time { font-family:var(--font-display); font-size:12px; font-weight:700; color:var(--txt3); width:44px; flex-shrink:0; }
+.slot-info { flex:1; min-width:0; }
+.slot-tipo { font-family:var(--font-display); font-size:11px; font-weight:800; letter-spacing:.06em; color:var(--txt); }
+.slot-jug { font-family:var(--font-body); font-size:10px; color:var(--txt3); margin-top:1px; }
+.slot-empty { font-family:var(--font-body); font-size:10px; color:var(--txt3); font-style:italic; }
+.slot-progress { width:60px; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+.slot-fill { height:100%; border-radius:2px; background:var(--accent); transition:width .3s; }
+.slot-fill.warn { background:var(--yellow); }
+.slot-fill.low  { background:var(--red); }
+
+/* ── STATUS PILLS ── */
+.status-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  border-radius:20px; padding:3px 9px;
+  font-family:var(--font-display); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+}
+.status-pill.abierto   { background:var(--blue-light); color:#4D90FF; }
+.status-pill.confirmado{ background:var(--green-light); color:var(--green); }
+.status-pill.lleno     { background:var(--green-light); color:var(--green); }
+.status-pill.cancelado { background:var(--red-light); color:var(--red); }
+.status-pill.en_juego  { background:rgba(196,122,0,0.1); color:var(--yellow); }
+.sp-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+/* ── DAY TABS ── */
+.day-tabs {
+  display:flex; align-items:center; gap:4px;
+  margin-bottom:20px; overflow-x:auto;
+  scrollbar-width:none;
+}
+.day-tabs::-webkit-scrollbar { display:none; }
+.day-tab {
+  flex-shrink:0; padding:8px 14px; border-radius:10px;
+  background:var(--surface3); border:1px solid var(--border);
+  cursor:pointer; transition:all .15s; text-align:center; min-width:62px;
+}
+.day-tab:hover { background:var(--surface2); border-color:var(--border2); }
+.day-tab.active { background:var(--accent-dim); border-color:rgba(143,204,0,0.3); }
+.day-tab-name { display:block; font-family:var(--font-display); font-size:9px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--txt3); }
+.day-tab.active .day-tab-name { color:var(--accent); }
+.day-tab-num  { display:block; font-family:var(--font-display); font-size:18px; font-weight:900; color:var(--txt2); line-height:1.2; }
+.day-tab.active .day-tab-num { color:#fff; }
+.day-tab-today { display:block; font-family:var(--font-display); font-size:8px; font-weight:700; letter-spacing:.1em; color:var(--accent); margin-top:2px; }
+.day-arrow {
+  width:28px; height:28px; background:var(--surface3); border:1px solid var(--border);
+  border-radius:6px; cursor:pointer; color:var(--txt2);
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+  flex-shrink:0; transition:background .15s;
+}
+.day-arrow:hover { background:var(--surface2); }
+.day-arrow.disabled { opacity:.3; pointer-events:none; }
+
+/* ── PAGOS ── */
+.pagos-wrap { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:24px; }
+.pago-row { display:grid; grid-template-columns:1fr 120px 100px 80px 100px; padding:13px 20px; border-bottom:1px solid rgba(255,255,255,0.04); align-items:center; }
+.pago-row:last-child { border-bottom:none; }
+.pago-row.head { border-bottom:1px solid var(--border); }
+.pr-name { font-family:var(--font-display); font-size:13px; font-weight:800; color:#fff; letter-spacing:.02em; }
+.pr-sub  { font-family:var(--font-body); font-size:10px; color:var(--txt3); }
+.pr-label{ font-family:var(--font-display); font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--txt3); }
+.pr-val  { font-family:var(--font-display); font-size:12px; color:var(--txt2); }
+.pr-amount{ font-family:var(--font-display); font-size:13px; color:#fff; font-weight:700; }
+
+/* ── CHARTS ── */
+.chart-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:24px; }
+.chart-big-num { font-family:var(--font-display); font-size:36px; font-weight:900; color:#fff; }
+.chart-delta { font-family:var(--font-display); font-size:12px; font-weight:800; color:var(--green); }
+.bar-chart { display:flex; align-items:flex-end; gap:8px; height:100px; }
+.bar-group { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.bar { width:100%; border-radius:5px 5px 0 0; background:rgba(143,204,0,0.15); transition:background .2s; cursor:pointer; }
+.bar:hover { background:rgba(143,204,0,0.4); }
+.bar.highlight { background:var(--accent); }
+.bar-label { font-family:var(--font-display); font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--txt3); }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:24px; }
+.chart-pills { display:flex; gap:6px; }
+.chart-pill { background:var(--surface3); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-family:var(--font-display); font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--txt2); cursor:pointer; }
+.chart-pill.active { background:var(--accent-dim); border-color:rgba(143,204,0,0.3); color:var(--accent); }
+.chart-title { font-family:var(--font-display); font-size:14px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:var(--txt2); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display:none; position:fixed; inset:0; z-index:200;
+  background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
+  align-items:center; justify-content:center;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+  width:520px; background:var(--surface); border:1px solid var(--border2);
+  border-radius:18px; overflow:hidden;
+  animation:slideUp .3s cubic-bezier(.22,1,.36,1) both;
+}
+.modal-header { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-title { font-family:var(--font-display); font-size:18px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; color:#fff; }
+.modal-close {
+  background:rgba(255,255,255,0.07); border:none; width:30px; height:30px;
+  border-radius:50%; cursor:pointer; color:var(--txt2); font-size:16px;
+  display:flex; align-items:center; justify-content:center; transition:background .15s;
+}
+.modal-close:hover { background:rgba(255,255,255,0.12); }
+.modal-body { padding:20px 24px; max-height:60vh; overflow-y:auto; }
+.modal-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.modal-row:last-child { border-bottom:none; }
+.modal-key { font-family:var(--font-display); font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--txt3); }
+.modal-val { font-family:var(--font-body); font-size:13px; color:#fff; }
+.modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; }
+.modal-btn-cancel {
+  height:38px; padding:0 18px;
+  background:rgba(194,59,43,0.1); border:1px solid rgba(194,59,43,0.25);
+  border-radius:9px; cursor:pointer; font-family:var(--font-display);
+  font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--red); transition:background .15s;
+}
+.modal-btn-cancel:hover { background:rgba(194,59,43,0.2); }
+.modal-j { display:flex; align-items:center; gap:8px; padding:6px 8px; background:rgba(255,255,255,0.04); border-radius:8px; margin-bottom:4px; }
+.modal-j-num { font-family:var(--font-display); font-size:10px; color:var(--txt3); width:16px; }
+.modal-j-avatar { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:10px; font-weight:900; color:#fff; }
+.modal-j-name { font-family:var(--font-display); font-size:12px; font-weight:800; color:#fff; }
+.j-equipo-tag { font-family:var(--font-display); font-size:9px; font-weight:800; border-radius:4px; padding:2px 6px; margin-left:auto; }
+.j-equipo-tag.a { background:rgba(26,109,255,0.15); color:#4D90FF; }
+.j-equipo-tag.b { background:rgba(0,168,90,0.12); color:#33CC80; }
+
+/* ── CONFIG ── */
+.config-input-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.login-select {
+  height:48px; background:rgba(255,255,255,0.05); border:1px solid var(--border2);
+  border-radius:10px; padding:0 16px; font-family:var(--font-body); font-size:14px;
+  color:var(--txt); outline:none; cursor:pointer; -webkit-appearance:none; appearance:none; width:100%;
+}
+.login-select option { background:#1E1E1E; }
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:24px; right:24px; z-index:999;
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:12px; padding:14px 20px;
+  font-family:var(--font-body); font-size:13px; color:var(--txt);
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  transform:translateY(80px); opacity:0;
+  transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .3s;
+  display:flex; align-items:center; gap:10px; max-width:320px;
+}
+.toast.show { transform:translateY(0); opacity:1; }
+.toast-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.toast-dot.success { background:var(--accent); }
+.toast-dot.error   { background:var(--red); }
+.toast-dot.info    { background:var(--blue); }
+
+/* ── LOADING SPINNER ── */
+.spinner {
+  width:20px; height:20px; border-radius:50%;
+  border:2px solid rgba(255,255,255,.1); border-top-color:var(--accent);
+  animation:spin .8s linear infinite; margin:40px auto; display:block;
+}
+
+/* ── EMPTY ── */
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; }
+.empty-text { font-family:var(--font-display); font-size:14px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--txt3); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:3px; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+@keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse   { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.85)} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      <div class="login-badge">
+        <svg viewBox="0 0 36 36" fill="none">
+          <rect width="36" height="36" rx="8" fill="#8FCC00"/>
+          <text x="18" y="26" text-anchor="middle" font-family="Outfit,sans-serif" font-size="18" font-weight="900" fill="#000">R</text>
+        </svg>
+      </div>
+      <div class="login-title">Retta</div>
+      <div class="login-subtitle">Panel de Complejos</div>
+    </div>
+    <div class="login-form">
+      <div>
+        <div class="login-label" style="margin-bottom:6px;">Email</div>
+        <input class="login-input" type="email" id="login-email" placeholder="admin@complejo.mx" autocomplete="email">
+      </div>
+      <div>
+        <div class="login-label" style="margin-bottom:6px;">Contraseña</div>
+        <input class="login-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-error" id="login-error"></div>
+      <button class="login-btn" id="login-btn" onclick="doLogin()">Iniciar sesión</button>
+      <p class="login-hint">Acceso exclusivo para administradores<br>de complejos afiliados a Retta.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ════════════════════════════════════ -->
+<div class="app" id="app-main" style="display:none;">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="s-badge">
+        <svg viewBox="0 0 18 18" fill="none"><text x="9" y="14" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="900" fill="#000">R</text></svg>
+      </div>
+      <div>
+        <div class="s-brand-name">Retta</div>
+        <div class="s-brand-sub" id="sidebar-complejo-name">Complejo</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Principal</span>
+      <a class="nav-item active" id="nav-agenda" onclick="showScreen('agenda')">
+        <div class="nav-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+        </div>
+        <span class="nav-label">Agenda</span>
+        <span class="nav-badge" id="badge-partidos" style="display:none;">0</span>
+      </a>
+      <span class="nav-section-label" style="margin-top:8px;">Finanzas</span>
+      <a class="nav-item" id="nav-pagos" onclick="showScreen('pagos')">
+        <div class="nav-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
+        <span class="nav-label">Pagos</span>
+      </a>
+      <span class="nav-section-label" style="margin-top:8px;">Sistema</span>
+      <a class="nav-item" id="nav-configuracion" onclick="showScreen('configuracion')">
+        <div class="nav-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <span class="nav-label">Config</span>
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sb-avatar" style="background:linear-gradient(135deg,#8FCC00,#C8F247)">A</div>
+        <div style="flex:1;min-width:0;">
+          <div class="sb-name" id="sb-user-name">Admin</div>
+          <div class="sb-role">Administrador</div>
+        </div>
+        <button class="sb-logout" onclick="doLogout()" title="Cerrar sesión">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Agenda</div>
+        <div class="topbar-sub" id="topbar-sub"></div>
+      </div>
+      <div class="topbar-right">
+        <div class="live-pill"><div class="live-dot"></div><span class="live-text">En vivo</span></div>
+        <div id="topbar-clock" style="font-family:var(--font-display);font-size:11px;color:var(--txt3);background:var(--surface3);border-radius:6px;padding:5px 10px;"></div>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div class="screen active" id="screen-agenda">
+      <div class="content">
+        <div class="day-tabs" id="day-tabs"></div>
+        <div class="section-hdr">
+          <span class="section-title">Estado de canchas · <span id="agenda-count" style="color:var(--txt3)">cargando...</span></span>
+          <button onclick="openNuevoPartidoModal()" style="height:32px;padding:0 14px;background:var(--accent);border:none;border-radius:8px;cursor:pointer;font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#000;transition:background .2s;" onmouseover="this.style.background='var(--accent-bright)'" onmouseout="this.style.background='var(--accent)'">+ Nuevo partido</button>
+        </div>
+        <div class="three-col" id="canchas-grid"></div>
+      </div>
+    </div>
+
+    <!-- PAGOS -->
+    <div class="screen" id="screen-pagos">
+      <div class="content">
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card" style="--accent-color:var(--green)">
+            <div class="stat-label">Cobrado hoy</div>
+            <div class="stat-num" id="stat-hoy">$—</div>
+          </div>
+          <div class="stat-card" style="--accent-color:var(--blue)">
+            <div class="stat-label">Mes actual</div>
+            <div class="stat-num" id="stat-mes">$—</div>
+          </div>
+          <div class="stat-card" style="--accent-color:var(--accent)">
+            <div class="stat-label">Total histórico</div>
+            <div class="stat-num" id="stat-total">$—</div>
+          </div>
+        </div>
+        <div class="section-hdr"><span class="section-title">Últimos cobros</span></div>
+        <div class="pagos-wrap">
+          <div class="pago-row head">
+            <div class="pr-label">Jugador / Partido</div>
+            <div class="pr-label">Cancha</div>
+            <div class="pr-label">Fecha</div>
+            <div class="pr-label">Monto</div>
+            <div class="pr-label">Estado</div>
+          </div>
+          <div id="pagos-list"><div class="spinner"></div></div>
+        </div>
+        <div class="section-hdr">
+          <span class="section-title">Ingresos semana</span>
+        </div>
+        <div class="chart-card">
+          <div class="chart-big-num" id="chart-total-semana">$—</div>
+          <div class="bar-chart" id="bar-chart" style="margin-top:16px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIGURACION -->
+    <div class="screen" id="screen-configuracion">
+      <div class="content">
+        <div class="section-hdr"><span class="section-title">Configuración del complejo</span></div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px;">
+          <div class="config-input-row">
+            <div>
+              <div class="login-label" style="margin-bottom:6px;">Nombre del complejo</div>
+              <input class="login-input" id="cfg-nombre" style="background:var(--surface3);">
+            </div>
+            <div>
+              <div class="login-label" style="margin-bottom:6px;">Ciudad</div>
+              <input class="login-input" id="cfg-ciudad" style="background:var(--surface3);">
+            </div>
+            <div>
+              <div class="login-label" style="margin-bottom:6px;">Email</div>
+              <input class="login-input" id="cfg-email" style="background:var(--surface3);" readonly>
+            </div>
+            <div>
+              <div class="login-label" style="margin-bottom:6px;">Teléfono</div>
+              <input class="login-input" id="cfg-tel" placeholder="+52 55 0000 0000" style="background:var(--surface3);">
+            </div>
+          </div>
+          <button onclick="guardarConfig()" style="height:40px;padding:0 20px;background:var(--accent);border:none;border-radius:9px;cursor:pointer;font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#000;">Guardar cambios</button>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <span class="section-title">Canchas del complejo</span>
+            <button onclick="showAddCanchaForm()" style="height:34px;padding:0 14px;background:var(--accent);border:none;border-radius:8px;cursor:pointer;font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#000;">+ Agregar cancha</button>
+          </div>
+          <div id="add-cancha-form" style="display:none;padding:16px 20px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);">
+            <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;">
+              <div>
+                <div class="login-label" style="margin-bottom:6px;">Nombre</div>
+                <input class="login-input" id="new-cancha-nombre" placeholder="Ej: Cancha VIP" style="background:var(--surface3);">
+              </div>
+              <div>
+                <div class="login-label" style="margin-bottom:6px;">Tipo de superficie</div>
+                <input class="login-input" id="new-cancha-tipo" placeholder="Ej: Césped sintético" style="background:var(--surface3);">
+              </div>
+              <button onclick="addCancha()" style="height:48px;padding:0 16px;background:var(--accent);border:none;border-radius:10px;cursor:pointer;font-family:var(--font-display);font-size:13px;font-weight:700;color:#000;">Agregar</button>
+            </div>
+          </div>
+          <div id="config-canchas-list"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL DETALLE PARTIDO -->
+<div class="modal-overlay" id="modal-partido" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Detalle del partido</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO PARTIDO -->
+<div class="modal-overlay" id="modal-nuevo-partido" onclick="if(event.target===this)closeNuevoPartidoModal()">
+  <div class="modal" style="width:480px;">
+    <div class="modal-header">
+      <span class="modal-title">Nuevo Partido</span>
+      <button class="modal-close" onclick="closeNuevoPartidoModal()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <div class="login-label" style="margin-bottom:6px;">Fecha</div>
+        <input type="date" id="np-fecha" class="login-input" style="background:var(--surface3);">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div class="login-label" style="margin-bottom:6px;">Cancha</div>
+          <select id="np-cancha" class="login-select" style="background:var(--surface3);"></select>
+        </div>
+        <div>
+          <div class="login-label" style="margin-bottom:6px;">Hora inicio</div>
+          <select id="np-hora" class="login-select" style="background:var(--surface3);">
+            <option>08:00</option><option>09:00</option><option>10:00</option><option>11:00</option>
+            <option>12:00</option><option>13:00</option><option>14:00</option><option>15:00</option>
+            <option>16:00</option><option>17:00</option><option>18:00</option><option>19:00</option>
+            <option>20:00</option><option>21:00</option><option>22:00</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div class="login-label" style="margin-bottom:6px;">Tipo de partido</div>
+          <select id="np-tipo" class="login-select" style="background:var(--surface3);">
+            <option value="7v7">7v7 (14 jugadores)</option>
+            <option value="9v9">9v9 (18 jugadores)</option>
+            <option value="11v11">11v11 (22 jugadores)</option>
+          </select>
+        </div>
+        <div>
+          <div class="login-label" style="margin-bottom:6px;">Precio por jugador (MXN)</div>
+          <input id="np-precio" class="login-input" placeholder="Ej: 180" type="number" min="50" value="180" style="background:var(--surface3);">
+        </div>
+      </div>
+      <div id="np-error" style="font-family:var(--font-body);font-size:12px;color:#FF6B6B;min-height:16px;"></div>
+    </div>
+    <div class="modal-footer" style="display:flex;">
+      <button id="np-btn" onclick="confirmarNuevoPartido()" style="height:38px;padding:0 20px;background:var(--accent);border:none;border-radius:9px;cursor:pointer;font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#000;">Agregar partido</button>
+      <button onclick="closeNuevoPartidoModal()" style="height:38px;padding:0 18px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:9px;cursor:pointer;font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--txt2);margin-left:8px;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <div class="toast-dot" id="toast-dot"></div>
+  <span id="toast-msg"></span>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// RETTA COMPLEJOS — Conectado al backend real
+// ════════════════════════════════════════════
+
+// ── Configura aquí tu backend ──────────────
+const API_URL        = 'https://retta-backend-production.up.railway.app/api';   // ← cambia esto
+const SUPABASE_URL   = 'https://nfdmnpkojrzqfkpdxuxb.supabase.co';          // ← cambia esto
+const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZG1ucGtvanJ6cWZrcGR4dXhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDcxNzIsImV4cCI6MjA5MTUyMzE3Mn0.TMnkFFPtI3g-jTHywrKosmIcmzvYQx5v5oaaz_FF_78'; // ← cambia esto
+// ────────────────────────────────────────────
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── Estado de la sesión ──
+let authToken   = localStorage.getItem('retta_complejo_token') || null;
+let complejoData= JSON.parse(localStorage.getItem('retta_complejo_data') || 'null');
+let canchas     = [];
+let partidos    = [];
+let pagos       = [];
+let activeDate  = new Date().toISOString().split('T')[0];
+let realtimeSub = null;
+
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  const str = now.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' }) + ' · ' +
+              now.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+  const el = document.getElementById('topbar-clock');
+  if (el) el.textContent = str.toUpperCase();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  const d = document.getElementById('toast-dot');
+  const m = document.getElementById('toast-msg');
+  d.className = 'toast-dot ' + type;
+  m.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── API helper ──
+async function api(path, opts = {}) {
+  const res = await fetch(API_URL + path, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: 'Bearer ' + authToken } : {}),
+      ...(opts.headers || {}),
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error del servidor');
+  return data;
+}
+
+// ════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-error');
+  err.textContent = '';
+  if (!email || !pass) { err.textContent = 'Ingresa email y contraseña'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Iniciando sesión...';
+  try {
+    const data = await api('/auth/complejos/login', {
+      method: 'POST', body: { email, password: pass }
+    });
+    authToken    = data.token;
+    complejoData = data.complejo;
+    localStorage.setItem('retta_complejo_token', authToken);
+    localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+    await initApp();
+  } catch (e) {
+    err.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Iniciar sesión';
+  }
+}
+
+function doLogout() {
+  authToken = null; complejoData = null;
+  localStorage.removeItem('retta_complejo_token');
+  localStorage.removeItem('retta_complejo_data');
+  if (realtimeSub) supabase.removeChannel(realtimeSub);
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-main').style.display = 'none';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+async function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-main').style.display = 'flex';
+
+  // Actualizar sidebar con datos del complejo
+  document.getElementById('sidebar-complejo-name').textContent = complejoData.nombre || 'Complejo';
+  document.getElementById('sb-user-name').textContent = 'Admin ' + complejoData.nombre;
+  const initials = (complejoData.nombre || 'X').slice(0, 2).toUpperCase();
+  document.getElementById('sb-avatar').textContent = initials;
+  document.getElementById('sb-avatar').style.background =
+    `linear-gradient(135deg, ${complejoData.color_hex || '#8FCC00'}, ${complejoData.color_hex || '#C8F247'}aa)`;
+
+  // Cargar canchas
+  await loadCanchas();
+
+  // Render agenda inicial
+  renderDayTabs();
+  await loadPartidos();
+
+  // Suscripción realtime Supabase
+  setupRealtime();
+
+  showScreen('agenda');
+}
+
+// Auto-login si hay token guardado
+window.addEventListener('DOMContentLoaded', async () => {
+  if (authToken && complejoData) {
+    try {
+      await initApp();
+    } catch {
+      doLogout();
+    }
+  }
+});
+
+// ════════════════════════════════════════════
+// REALTIME — Supabase escucha cambios en vivo
+// ════════════════════════════════════════════
+function setupRealtime() {
+  if (realtimeSub) supabase.removeChannel(realtimeSub);
+
+  realtimeSub = supabase
+    .channel('partidos-complejo')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'partidos',
+      filter: `complejo_id=eq.${complejoData.id}`,
+    }, async (payload) => {
+      console.log('[Realtime] Cambio en partido:', payload.eventType);
+      showToast('Agenda actualizada en vivo', 'info');
+      await loadPartidos();
+    })
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'inscripciones',
+    }, async (payload) => {
+      console.log('[Realtime] Nueva inscripción');
+      await loadPartidos();
+    })
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'pagos',
+      filter: `complejo_id=eq.${complejoData.id}`,
+    }, async () => {
+      showToast('Nuevo pago recibido', 'success');
+      await loadPartidos();
+    })
+    .subscribe();
+}
+
+// ════════════════════════════════════════════
+// DATA LOADERS
+// ════════════════════════════════════════════
+async function loadCanchas() {
+  try {
+    canchas = await api('/complejos/me/canchas');
+    renderCanchasConfig();
+    populateCanchaSelect();
+  } catch (e) {
+    console.error('Error cargando canchas:', e);
+  }
+}
+
+async function loadPartidos() {
+  try {
+    const data = await api(`/complejos/me/partidos?fecha=${activeDate}`);
+    partidos = data;
+    renderAgenda();
+    updateAgendaBadge();
+  } catch (e) {
+    console.error('Error cargando partidos:', e);
+    renderAgendaEmpty();
+  }
+}
+
+async function loadPagos() {
+  try {
+    const data = await api('/complejos/me/pagos?limit=20');
+    pagos = data;
+    renderPagos();
+  } catch (e) {
+    console.error('Error cargando pagos:', e);
+  }
+  try {
+    const dash = await api('/complejos/me/dashboard');
+    renderDashStats(dash);
+  } catch (e) {
+    console.error('Error cargando dashboard:', e);
+  }
+}
+
+// ════════════════════════════════════════════
+// NAVEGACIÓN
+// ════════════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  const nav = document.getElementById('nav-' + name);
+  if (nav) nav.classList.add('active');
+  const titles = { agenda:'Agenda', pagos:'Pagos', configuracion:'Configuración' };
+  document.getElementById('topbar-title').textContent = titles[name] || name;
+  if (name === 'pagos') loadPagos();
+  if (name === 'configuracion') renderConfigForm();
+}
+
+// ════════════════════════════════════════════
+// DAY TABS
+// ════════════════════════════════════════════
+let dayWindowStart = 0;
+const DAYS = (() => {
+  const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  const days   = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+  const today  = new Date();
+  const arr = [];
+  for (let i = -7; i <= 21; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    arr.push({
+      iso:   d.toISOString().split('T')[0],
+      name:  i === 0 ? 'HOY' : days[d.getDay()],
+      num:   d.getDate(),
+      month: months[d.getMonth()],
+      today: i === 0,
+    });
+  }
+  return arr;
+})();
+
+// Set today index
+dayWindowStart = DAYS.findIndex(d => d.today);
+
+function renderDayTabs() {
+  const c = document.getElementById('day-tabs');
+  const win = DAYS.slice(dayWindowStart, dayWindowStart + 7);
+  const canBack = dayWindowStart > 0;
+  const canFwd  = dayWindowStart + 7 < DAYS.length;
+  c.innerHTML =
+    `<button class="day-arrow ${canBack?'':'disabled'}" onclick="shiftDays(-1)">&#8249;</button>` +
+    win.map((d) =>
+      `<div class="day-tab ${d.iso === activeDate ? 'active' : ''}" onclick="selectDay('${d.iso}')">
+        <span class="day-tab-name">${d.name}</span>
+        <span class="day-tab-num">${d.num}</span>
+        ${d.today ? '<span class="day-tab-today">Hoy</span>' : ''}
+      </div>`
+    ).join('') +
+    `<button class="day-arrow ${canFwd?'':'disabled'}" onclick="shiftDays(1)">&#8250;</button>`;
+
+  // Topbar sub
+  const sel = DAYS.find(d => d.iso === activeDate);
+  if (sel) document.getElementById('topbar-sub').textContent =
+    `${sel.today ? 'Hoy · ' : ''}${sel.name} ${sel.num} ${sel.month}`;
+}
+
+function shiftDays(dir) {
+  dayWindowStart = Math.max(0, Math.min(DAYS.length - 7, dayWindowStart + dir));
+  renderDayTabs();
+}
+
+async function selectDay(iso) {
+  activeDate = iso;
+  renderDayTabs();
+  await loadPartidos();
+}
+
+// ════════════════════════════════════════════
+// AGENDA RENDER
+// ════════════════════════════════════════════
+function updateAgendaBadge() {
+  const abiertos = partidos.filter(p => p.status === 'abierto').length;
+  const badge = document.getElementById('badge-partidos');
+  if (abiertos > 0) {
+    badge.style.display = '';
+    badge.textContent = abiertos;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderAgenda() {
+  const grid = document.getElementById('canchas-grid');
+  document.getElementById('agenda-count').textContent = `${partidos.length} partido${partidos.length !== 1 ? 's' : ''}`;
+
+  if (!canchas.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-text">Sin canchas configuradas</div></div>';
+    return;
+  }
+
+  const HORARIOS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
+
+  grid.innerHTML = canchas.map(can => {
+    const matchesHere = partidos.filter(p => p.cancha_id === can.id);
+    const slots = HORARIOS.map(hora => {
+      const partido = matchesHere.find(p => (p.hora_inicio || '').slice(0,5) === hora);
+      if (partido) {
+        const pct   = (partido.jugadores_confirmados || 0) / partido.max_jugadores;
+        const fill  = pct >= 0.8 ? '' : pct < 0.5 ? 'low' : 'warn';
+        return `<div class="slot-row" onclick='openModal(${JSON.stringify(partido)})'>
+          <div class="slot-time">${hora}</div>
+          <div class="slot-info">
+            <div class="slot-tipo">${partido.tipo} · ${partido.precio_jugador ? '$' + partido.precio_jugador : ''}</div>
+            <div class="slot-jug">${partido.jugadores_confirmados || 0}/${partido.max_jugadores} jugadores</div>
+          </div>
+          <span class="status-pill ${partido.status}" style="font-size:9px;padding:2px 7px;">
+            <span class="sp-dot"></span>${statusLabel(partido.status)}
+          </span>
+        </div>`;
+      }
+      return `<div class="slot-row" style="opacity:.35;">
+        <div class="slot-time">${hora}</div>
+        <div class="slot-empty">Disponible</div>
+      </div>`;
+    });
+    return `<div class="cancha-card">
+      <div class="cancha-header">
+        <div class="cancha-color" style="background:${can.color_hex}"></div>
+        <span class="cancha-name">${can.nombre}</span>
+        <span class="cancha-type">${can.tipo || ''}</span>
+      </div>
+      <div class="cancha-body">${slots.join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAgendaEmpty() {
+  document.getElementById('canchas-grid').innerHTML =
+    '<div class="empty-state" style="grid-column:1/-1"><div class="empty-text">Error cargando partidos</div></div>';
+}
+
+function statusLabel(s) {
+  return { abierto:'Abierto', confirmado:'Confirmado', lleno:'Lleno', en_juego:'En juego', cancelado:'Cancelado', finalizado:'Finalizado' }[s] || s;
+}
+
+// ════════════════════════════════════════════
+// MODAL DETALLE PARTIDO
+// ════════════════════════════════════════════
+let _modalPartidoId = null;
+
+function openModal(p) {
+  if (typeof p === 'string') p = JSON.parse(p);
+  _modalPartidoId = p.id;
+  const colors = ['#D62B2B','#1A6DFF','#00A85A','#F5A623','#8B5CF6','#FF6B35'];
+  document.getElementById('modal-title').textContent = `${p.cancha_nombre || p.cancha} — ${(p.hora_inicio || '').slice(0,5)}`;
+
+  const equipoA = (p.jugadores || []).filter(j => j.equipo === 'A');
+  const equipoB = (p.jugadores || []).filter(j => j.equipo === 'B');
+  const jugConf = p.jugadores_confirmados || equipoA.length + equipoB.length;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-row"><span class="modal-key">Tipo</span><span class="modal-val">${p.tipo}</span></div>
+    <div class="modal-row"><span class="modal-key">Precio por jugador</span><span class="modal-val">$${p.precio_jugador} MXN</span></div>
+    <div class="modal-row"><span class="modal-key">Estado</span><span class="modal-val"><span class="status-pill ${p.status}"><span class="sp-dot"></span>${statusLabel(p.status)}</span></span></div>
+    <div class="modal-row"><span class="modal-key">Jugadores</span><span class="modal-val">${jugConf} / ${p.max_jugadores}</span></div>
+    ${p.notas ? `<div class="modal-row"><span class="modal-key">Notas</span><span class="modal-val">${p.notas}</span></div>` : ''}
+    <div style="margin-top:14px;">
+      <div style="font-family:var(--font-display);font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px;">
+        Equipo A (${equipoA.length})
+      </div>
+      ${equipoA.length ? equipoA.map((j, i) => `
+        <div class="modal-j">
+          <span class="modal-j-num">${i+1}</span>
+          <div class="modal-j-avatar" style="background:${colors[i%colors.length]}">${(j.nombre||'?')[0]}</div>
+          <span class="modal-j-name">${j.nombre} ${j.apellido||''}</span>
+          <span class="j-equipo-tag a">A</span>
+        </div>`).join('') : '<div style="font-family:var(--font-body);font-size:11px;color:var(--txt3);padding:6px 0;">Sin jugadores aún</div>'}
+      <div style="font-family:var(--font-display);font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--txt3);margin-top:12px;margin-bottom:8px;">
+        Equipo B (${equipoB.length})
+      </div>
+      ${equipoB.length ? equipoB.map((j, i) => `
+        <div class="modal-j">
+          <span class="modal-j-num">${i+1}</span>
+          <div class="modal-j-avatar" style="background:${colors[(i+3)%colors.length]}">${(j.nombre||'?')[0]}</div>
+          <span class="modal-j-name">${j.nombre} ${j.apellido||''}</span>
+          <span class="j-equipo-tag b">B</span>
+        </div>`).join('') : '<div style="font-family:var(--font-body);font-size:11px;color:var(--txt3);padding:6px 0;">Sin jugadores aún</div>'}
+    </div>`;
+
+  const footer = document.getElementById('modal-footer');
+  if (p.status !== 'cancelado' && p.status !== 'finalizado') {
+    footer.style.display = 'flex';
+    footer.innerHTML = `<button class="modal-btn-cancel" onclick="cancelarPartido('${p.id}')">Cancelar partido</button>`;
+  } else {
+    footer.style.display = 'none';
+  }
+  document.getElementById('modal-partido').classList.add('open');
+}
+
+async function cancelarPartido(id) {
+  if (!confirm('¿Cancelar este partido? Los jugadores serán notificados y se procesarán reembolsos.')) return;
+  try {
+    await api(`/partidos/${id}/cancelar`, { method: 'DELETE' });
+    closeModal();
+    showToast('Partido cancelado. Jugadores notificados.', 'info');
+    await loadPartidos();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal-partido').classList.remove('open');
+}
+
+// ════════════════════════════════════════════
+// NUEVO PARTIDO
+// ════════════════════════════════════════════
+function populateCanchaSelect() {
+  const sel = document.getElementById('np-cancha');
+  if (!sel) return;
+  sel.innerHTML = canchas.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+}
+
+function openNuevoPartidoModal() {
+  document.getElementById('np-fecha').value = activeDate;
+  document.getElementById('np-error').textContent = '';
+  populateCanchaSelect();
+  document.getElementById('modal-nuevo-partido').classList.add('open');
+}
+
+function closeNuevoPartidoModal() {
+  document.getElementById('modal-nuevo-partido').classList.remove('open');
+}
+
+async function confirmarNuevoPartido() {
+  const fecha     = document.getElementById('np-fecha').value;
+  const canchaId  = document.getElementById('np-cancha').value;
+  const hora      = document.getElementById('np-hora').value;
+  const tipo      = document.getElementById('np-tipo').value;
+  const precio    = parseFloat(document.getElementById('np-precio').value);
+  const errEl     = document.getElementById('np-error');
+  const btn       = document.getElementById('np-btn');
+  errEl.textContent = '';
+
+  if (!fecha || !canchaId || !hora) { errEl.textContent = 'Completa todos los campos'; return; }
+  if (!precio || precio < 50) { errEl.textContent = 'El precio mínimo es $50 MXN'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Creando...';
+  try {
+    await api('/partidos', {
+      method: 'POST',
+      body: { cancha_id: canchaId, fecha, hora_inicio: hora + ':00', tipo, precio_jugador: precio },
+    });
+    closeNuevoPartidoModal();
+    showToast('Partido creado correctamente', 'success');
+    await loadPartidos();
+  } catch (e) {
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Agregar partido';
+  }
+}
+
+// ════════════════════════════════════════════
+// PAGOS
+// ════════════════════════════════════════════
+function renderPagos() {
+  const list = document.getElementById('pagos-list');
+  if (!pagos.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-text">Sin pagos registrados</div></div>';
+    return;
+  }
+  list.innerHTML = pagos.map(p => {
+    const nombre = p.usuarios ? `${p.usuarios.nombre} ${p.usuarios.apellido || ''}`.trim() : 'Jugador';
+    const fecha  = p.partidos?.fecha || p.created_at?.split('T')[0] || '—';
+    const hora   = p.partidos?.hora_inicio?.slice(0,5) || '—';
+    return `<div class="pago-row">
+      <div><div class="pr-name">${nombre}</div><div class="pr-sub">${fecha}</div></div>
+      <div class="pr-val">${hora}</div>
+      <div class="pr-val">${fecha}</div>
+      <div class="pr-amount">$${Number(p.monto).toLocaleString('es-MX')} MXN</div>
+      <div><span class="status-pill confirmado"><span class="sp-dot"></span>Completado</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderDashStats(dash) {
+  if (dash.stats) {
+    const total = dash.stats.ingresos_totales || 0;
+    document.getElementById('stat-total').textContent = '$' + Math.round(total).toLocaleString('es-MX');
+  }
+
+  // Ingresos semana
+  const semana = dash.ingresos_semana || {};
+  const dias = Object.keys(semana).sort();
+  const vals = dias.map(d => semana[d]);
+  const totalSem = vals.reduce((a, b) => a + b, 0);
+  document.getElementById('chart-total-semana').textContent = '$' + Math.round(totalSem).toLocaleString('es-MX');
+  const max = Math.max(...vals, 1);
+  const names = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+  const barChart = document.getElementById('bar-chart');
+  if (barChart && dias.length) {
+    barChart.innerHTML = dias.map((d, i) => {
+      const pct = Math.round((vals[i] / max) * 100);
+      const isMax = vals[i] === Math.max(...vals);
+      return `<div class="bar-group">
+        <div class="bar ${isMax ? 'highlight' : ''}" style="height:${pct}%"></div>
+        <div class="bar-label">${names[new Date(d).getDay()]}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Stats hoy / mes
+  const hoy = new Date().toISOString().split('T')[0];
+  const mesActual = hoy.slice(0, 7);
+  let sumHoy = 0, sumMes = 0;
+  pagos.forEach(p => {
+    const fecha = p.created_at?.split('T')[0] || '';
+    if (fecha === hoy) sumHoy += Number(p.monto);
+    if (fecha.startsWith(mesActual)) sumMes += Number(p.monto);
+  });
+  document.getElementById('stat-hoy').textContent = '$' + Math.round(sumHoy).toLocaleString('es-MX');
+  document.getElementById('stat-mes').textContent = '$' + Math.round(sumMes).toLocaleString('es-MX');
+}
+
+// ════════════════════════════════════════════
+// CONFIGURACIÓN
+// ════════════════════════════════════════════
+function renderConfigForm() {
+  if (!complejoData) return;
+  document.getElementById('cfg-nombre').value = complejoData.nombre || '';
+  document.getElementById('cfg-ciudad').value = complejoData.ciudad || '';
+  document.getElementById('cfg-email').value  = complejoData.email || '';
+  renderCanchasConfig();
+}
+
+function renderCanchasConfig() {
+  const list = document.getElementById('config-canchas-list');
+  if (!list) return;
+  if (!canchas.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-text">Sin canchas</div></div>';
+    return;
+  }
+  list.innerHTML = canchas.map((c, i) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div style="width:10px;height:10px;border-radius:50%;background:${c.color_hex};flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="font-family:var(--font-display);font-size:13px;font-weight:800;color:#fff;">${c.nombre}</div>
+        <div style="font-family:var(--font-body);font-size:10px;color:var(--txt3);">${c.tipo || 'Sin tipo'}</div>
+      </div>
+      <button onclick="removeCancha('${c.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:4px;line-height:1;" title="Eliminar">×</button>
+    </div>`).join('');
+}
+
+function showAddCanchaForm() {
+  const f = document.getElementById('add-cancha-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function addCancha() {
+  const nombre = document.getElementById('new-cancha-nombre').value.trim();
+  const tipo   = document.getElementById('new-cancha-tipo').value.trim();
+  if (!nombre) { showToast('Escribe el nombre de la cancha', 'error'); return; }
+  const colors = ['#1A6DFF','#8B5CF6','#00A85A','#F5A623','#D62B2B','#FF6B35'];
+  try {
+    const nueva = await api('/complejos/me/canchas', {
+      method: 'POST',
+      body: { nombre, tipo, color_hex: colors[canchas.length % colors.length] },
+    });
+    canchas.push(nueva);
+    document.getElementById('new-cancha-nombre').value = '';
+    document.getElementById('new-cancha-tipo').value   = '';
+    document.getElementById('add-cancha-form').style.display = 'none';
+    renderCanchasConfig();
+    populateCanchaSelect();
+    showToast('Cancha agregada', 'success');
+    await loadPartidos();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function removeCancha(id) {
+  if (!confirm('¿Desactivar esta cancha?')) return;
+  try {
+    await api(`/complejos/me/canchas/${id}`, { method: 'DELETE' });
+    canchas = canchas.filter(c => c.id !== id);
+    renderCanchasConfig();
+    populateCanchaSelect();
+    showToast('Cancha desactivada', 'info');
+    await loadPartidos();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function guardarConfig() {
+  const nombre = document.getElementById('cfg-nombre').value.trim();
+  const ciudad = document.getElementById('cfg-ciudad').value.trim();
+  const tel    = document.getElementById('cfg-tel').value.trim();
+  if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
+  // Por ahora solo actualizamos en local (el endpoint PATCH /complejos/me se puede agregar)
+  complejoData.nombre = nombre;
+  complejoData.ciudad = ciudad;
+  localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+  document.getElementById('sidebar-complejo-name').textContent = nombre;
+  showToast('Configuración guardada', 'success');
+}
+</script>
+</body>
+</html>
