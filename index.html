@@ -579,10 +579,6 @@ html, body { height:100%; font-family:var(--font-body); background:var(--bg); co
               <input class="login-input" id="cfg-ciudad" style="background:var(--surface3);">
             </div>
             <div>
-              <div class="login-label" style="margin-bottom:6px;">Email</div>
-              <input class="login-input" id="cfg-email" style="background:var(--surface3);" readonly>
-            </div>
-            <div>
               <div class="login-label" style="margin-bottom:6px;">Teléfono</div>
               <input class="login-input" id="cfg-tel" placeholder="+52 55 0000 0000" style="background:var(--surface3);">
             </div>
@@ -1251,7 +1247,7 @@ function renderConfigForm() {
   if (!complejoData) return;
   document.getElementById('cfg-nombre').value = complejoData.nombre || '';
   document.getElementById('cfg-ciudad').value = complejoData.ciudad || '';
-  document.getElementById('cfg-email').value  = complejoData.email || '';
+  document.getElementById('cfg-tel').value    = complejoData.telefono || '';
   renderCanchasConfig();
 }
 
@@ -1320,12 +1316,20 @@ async function guardarConfig() {
   const ciudad = document.getElementById('cfg-ciudad').value.trim();
   const tel    = document.getElementById('cfg-tel').value.trim();
   if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
-  // Por ahora solo actualizamos en local (el endpoint PATCH /complejos/me se puede agregar)
-  complejoData.nombre = nombre;
-  complejoData.ciudad = ciudad;
-  localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
-  document.getElementById('sidebar-complejo-name').textContent = nombre;
-  showToast('Configuración guardada', 'success');
+  try {
+    const updated = await api('/complejos/me', {
+      method: 'PATCH',
+      body: { nombre, ciudad, telefono: tel },
+    });
+    complejoData.nombre   = updated.nombre || nombre;
+    complejoData.ciudad   = updated.ciudad || ciudad;
+    complejoData.telefono = updated.telefono || tel;
+    localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+    document.getElementById('sidebar-complejo-name').textContent = nombre;
+    showToast('Configuración guardada', 'success');
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 </script>
 </body>
