@@ -698,7 +698,7 @@ const SUPABASE_URL   = 'https://nfdmnpkojrzqfkpdxuxb.supabase.co';          // �
 const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZG1ucGtvanJ6cWZrcGR4dXhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDcxNzIsImV4cCI6MjA5MTUyMzE3Mn0.TMnkFFPtI3g-jTHywrKosmIcmzvYQx5v5oaaz_FF_78'; // ← cambia esto
 // ────────────────────────────────────────────
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ── Estado de la sesión ──
 let authToken   = localStorage.getItem('retta_complejo_token') || null;
@@ -782,7 +782,7 @@ function doLogout() {
   authToken = null; complejoData = null;
   localStorage.removeItem('retta_complejo_token');
   localStorage.removeItem('retta_complejo_data');
-  if (realtimeSub) supabase.removeChannel(realtimeSub);
+  if (realtimeSub) supabaseClient.removeChannel(realtimeSub);
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app-main').style.display = 'none';
   document.getElementById('login-email').value = '';
@@ -849,9 +849,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 // REALTIME — Supabase escucha cambios en vivo
 // ════════════════════════════════════════════
 function setupRealtime() {
-  if (realtimeSub) supabase.removeChannel(realtimeSub);
+  if (realtimeSub) supabaseClient.removeChannel(realtimeSub);
 
-  realtimeSub = supabase
+  realtimeSub = supabaseClient
     .channel('partidos-complejo')
     .on('postgres_changes', {
       event: '*',
