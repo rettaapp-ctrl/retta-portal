@@ -817,6 +817,23 @@ async function initApp() {
   showScreen('agenda');
 }
 
+// ── Exponer funciones globalmente para onclick inline ──
+window.doLogin               = doLogin;
+window.doLogout              = doLogout;
+window.showScreen            = showScreen;
+window.shiftDays             = shiftDays;
+window.selectDay             = selectDay;
+window.openModal             = openModal;
+window.closeModal            = closeModal;
+window.cancelarPartido       = cancelarPartido;
+window.openNuevoPartidoModal = openNuevoPartidoModal;
+window.closeNuevoPartidoModal= closeNuevoPartidoModal;
+window.confirmarNuevoPartido = confirmarNuevoPartido;
+window.showAddCanchaForm     = showAddCanchaForm;
+window.addCancha             = addCancha;
+window.removeCancha          = removeCancha;
+window.guardarConfig         = guardarConfig;
+
 // Auto-login si hay token guardado
 window.addEventListener('DOMContentLoaded', async () => {
   if (authToken && complejoData) {
