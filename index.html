@@ -879,7 +879,8 @@ function setupRealtime() {
 // ════════════════════════════════════════════
 async function loadCanchas() {
   try {
-    canchas = await api('/complejos/me/canchas');
+    const resC = await api('/complejos/me/canchas');
+    canchas = resC.canchas || resC || [];
     renderCanchasConfig();
     populateCanchaSelect();
   } catch (e) {
@@ -890,7 +891,7 @@ async function loadCanchas() {
 async function loadPartidos() {
   try {
     const data = await api(`/complejos/me/partidos?fecha=${activeDate}`);
-    partidos = data;
+    partidos = data.partidos || data || [];
     renderAgenda();
     updateAgendaBadge();
   } catch (e) {
@@ -1282,7 +1283,7 @@ async function addCancha() {
   try {
     const nueva = await api('/complejos/me/canchas', {
       method: 'POST',
-      body: { nombre, tipo, color_hex: colors[canchas.length % colors.length] },
+      body: { nombre, tipo_superficie: tipo || 'pasto_sintetico', color_hex: colors[canchas.length % colors.length] },
     });
     canchas.push(nueva);
     document.getElementById('new-cancha-nombre').value = '';
