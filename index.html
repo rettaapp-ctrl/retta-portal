@@ -879,7 +879,8 @@ function setupRealtime() {
 // ════════════════════════════════════════════
 async function loadCanchas() {
   try {
-    canchas = await api('/complejos/me/canchas');
+    const resC = await api('/complejos/me/canchas');
+    canchas = resC.canchas || resC || [];
     renderCanchasConfig();
     populateCanchaSelect();
   } catch (e) {
