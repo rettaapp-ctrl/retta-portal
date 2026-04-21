@@ -582,6 +582,14 @@ html, body { height:100%; font-family:var(--font-body); background:var(--bg); co
               <div class="login-label" style="margin-bottom:6px;">Teléfono</div>
               <input class="login-input" id="cfg-tel" placeholder="+52 55 0000 0000" style="background:var(--surface3);">
             </div>
+            <div>
+              <div class="login-label" style="margin-bottom:6px;">Dirección</div>
+              <input class="login-input" id="cfg-direccion" placeholder="Av. Insurgentes Sur 1234" style="background:var(--surface3);">
+            </div>
+            <div>
+              <div class="login-label" style="margin-bottom:6px;">Email del complejo</div>
+              <input class="login-input" id="cfg-email" type="email" placeholder="complejo@email.com" style="background:var(--surface3);">
+            </div>
           </div>
           <!-- Foto del complejo -->
           <div style="margin-bottom:20px;">
@@ -1263,9 +1271,11 @@ function renderDashStats(dash) {
 // ════════════════════════════════════════════
 function renderConfigForm() {
   if (!complejoData) return;
-  document.getElementById('cfg-nombre').value = complejoData.nombre || '';
-  document.getElementById('cfg-ciudad').value = complejoData.ciudad || '';
-  document.getElementById('cfg-tel').value    = complejoData.telefono || '';
+  document.getElementById('cfg-nombre').value    = complejoData.nombre    || '';
+  document.getElementById('cfg-ciudad').value    = complejoData.ciudad    || '';
+  document.getElementById('cfg-tel').value       = complejoData.telefono  || '';
+  document.getElementById('cfg-direccion').value = complejoData.direccion || '';
+  document.getElementById('cfg-email').value     = complejoData.email     || '';
   const preview = document.getElementById('cfg-foto-preview');
   if (preview && complejoData.logo_url) {
     preview.innerHTML = `<img src="${complejoData.logo_url}" style="width:100%;height:100%;object-fit:cover;">`;
