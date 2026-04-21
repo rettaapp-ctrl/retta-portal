@@ -583,6 +583,22 @@ html, body { height:100%; font-family:var(--font-body); background:var(--bg); co
               <input class="login-input" id="cfg-tel" placeholder="+52 55 0000 0000" style="background:var(--surface3);">
             </div>
           </div>
+          <!-- Foto del complejo -->
+          <div style="margin-bottom:20px;">
+            <div class="login-label" style="margin-bottom:10px;">Foto del complejo</div>
+            <div style="display:flex;align-items:center;gap:16px;">
+              <div id="cfg-foto-preview" style="width:80px;height:80px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:24px;">🏟️</span>
+              </div>
+              <div>
+                <label for="cfg-foto-input" style="display:inline-block;height:36px;padding:0 16px;background:var(--surface3);border:1px solid var(--border2);border-radius:9px;cursor:pointer;font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt2);line-height:36px;">
+                  Subir foto
+                </label>
+                <input type="file" id="cfg-foto-input" accept="image/*" style="display:none;" onchange="handleFotoChange(event)">
+                <div id="cfg-foto-status" style="font-family:var(--font-body);font-size:11px;color:var(--txt3);margin-top:6px;"></div>
+              </div>
+            </div>
+          </div>
           <button onclick="guardarConfig()" style="height:40px;padding:0 20px;background:var(--accent);border:none;border-radius:9px;cursor:pointer;font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#000;">Guardar cambios</button>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
@@ -824,6 +840,7 @@ window.showAddCanchaForm     = showAddCanchaForm;
 window.addCancha             = addCancha;
 window.removeCancha          = removeCancha;
 window.guardarConfig         = guardarConfig;
+window.handleFotoChange      = handleFotoChange;
 
 // Auto-login si hay token guardado
 window.addEventListener('DOMContentLoaded', async () => {
@@ -1249,7 +1266,49 @@ function renderConfigForm() {
   document.getElementById('cfg-nombre').value = complejoData.nombre || '';
   document.getElementById('cfg-ciudad').value = complejoData.ciudad || '';
   document.getElementById('cfg-tel').value    = complejoData.telefono || '';
+  // Mostrar foto actual si existe
+  const preview = document.getElementById('cfg-foto-preview');
+  if (preview && complejoData.foto_url) {
+    preview.innerHTML = `<img src="${complejoData.foto_url}" style="width:100%;height:100%;object-fit:cover;">`;
+  }
   renderCanchasConfig();
+}
+
+async function handleFotoChange(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('cfg-foto-status');
+  const preview = document.getElementById('cfg-foto-preview');
+  status.textContent = 'Subiendo...';
+  try {
+    // Preview local inmediato
+    const reader = new FileReader();
+    reader.onload = e => {
+      preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(file);
+    // Subir a Supabase Storage
+    const ext      = file.name.split('.').pop();
+    const fileName = `complejo_${complejoData.id}_${Date.now()}.${ext}`;
+    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+      .from('complejos')
+      .upload(fileName, file, { upsert: true, contentType: file.type });
+    if (uploadError) throw uploadError;
+    // Obtener URL pública
+    const { data: urlData } = supabaseClient.storage.from('complejos').getPublicUrl(fileName);
+    const foto_url = urlData.publicUrl;
+    // Guardar en backend
+    await api('/complejos/me', { method: 'PATCH', body: { foto_url } });
+    complejoData.foto_url = foto_url;
+    localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+    status.textContent = '✓ Foto guardada';
+    status.style.color = 'var(--accent)';
+    showToast('Foto actualizada', 'success');
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+    status.style.color = 'var(--red)';
+    showToast('Error al subir foto: ' + e.message, 'error');
+  }
 }
 
 function renderCanchasConfig() {
@@ -1318,10 +1377,8 @@ async function guardarConfig() {
   const tel    = document.getElementById('cfg-tel').value.trim();
   if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
   try {
-    const updated = await api('/complejos/me', {
-      method: 'PATCH',
-      body: { nombre, ciudad, telefono: tel },
-    });
+    const body = { nombre, ciudad, telefono: tel };
+    const updated = await api('/complejos/me', { method: 'PATCH', body });
     complejoData.nombre   = updated.nombre || nombre;
     complejoData.ciudad   = updated.ciudad || ciudad;
     complejoData.telefono = updated.telefono || tel;
