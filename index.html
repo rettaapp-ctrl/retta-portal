@@ -1380,18 +1380,22 @@ async function removeCancha(id) {
 }
 
 async function guardarConfig() {
-  const nombre = document.getElementById('cfg-nombre').value.trim();
-  const ciudad = document.getElementById('cfg-ciudad').value.trim();
-  const tel    = document.getElementById('cfg-tel').value.trim();
+  const nombre    = document.getElementById('cfg-nombre').value.trim();
+  const ciudad    = document.getElementById('cfg-ciudad').value.trim();
+  const tel       = document.getElementById('cfg-tel').value.trim();
+  const direccion = document.getElementById('cfg-direccion').value.trim();
+  const email     = document.getElementById('cfg-email').value.trim();
   if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
   try {
     const updated = await api('/complejos/me', {
       method: 'PATCH',
-      body: { nombre, ciudad, telefono: tel },
+      body: { nombre, ciudad, telefono: tel, direccion, email },
     });
-    complejoData.nombre   = updated.nombre || nombre;
-    complejoData.ciudad   = updated.ciudad || ciudad;
-    complejoData.telefono = updated.telefono || tel;
+    complejoData.nombre    = updated.nombre    || nombre;
+    complejoData.ciudad    = updated.ciudad    || ciudad;
+    complejoData.telefono  = updated.telefono  || tel;
+    complejoData.direccion = updated.direccion || direccion;
+    complejoData.email     = updated.email     || email;
     localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
     document.getElementById('sidebar-complejo-name').textContent = nombre;
     showToast('Configuración guardada', 'success');
