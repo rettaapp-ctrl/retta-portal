@@ -1266,10 +1266,9 @@ function renderConfigForm() {
   document.getElementById('cfg-nombre').value = complejoData.nombre || '';
   document.getElementById('cfg-ciudad').value = complejoData.ciudad || '';
   document.getElementById('cfg-tel').value    = complejoData.telefono || '';
-  // Mostrar foto actual si existe
   const preview = document.getElementById('cfg-foto-preview');
-  if (preview && complejoData.foto_url) {
-    preview.innerHTML = `<img src="${complejoData.foto_url}" style="width:100%;height:100%;object-fit:cover;">`;
+  if (preview && complejoData.logo_url) {
+    preview.innerHTML = `<img src="${complejoData.logo_url}" style="width:100%;height:100%;object-fit:cover;">`;
   }
   renderCanchasConfig();
 }
@@ -1277,9 +1276,10 @@ function renderConfigForm() {
 async function handleFotoChange(event) {
   const file = event.target.files[0];
   if (!file) return;
-  const status = document.getElementById('cfg-foto-status');
+  const status  = document.getElementById('cfg-foto-status');
   const preview = document.getElementById('cfg-foto-preview');
   status.textContent = 'Subiendo...';
+  status.style.color = 'var(--txt3)';
   try {
     // Preview local inmediato
     const reader = new FileReader();
@@ -1294,12 +1294,10 @@ async function handleFotoChange(event) {
       .from('complejos')
       .upload(fileName, file, { upsert: true, contentType: file.type });
     if (uploadError) throw uploadError;
-    // Obtener URL pública
     const { data: urlData } = supabaseClient.storage.from('complejos').getPublicUrl(fileName);
-    const foto_url = urlData.publicUrl;
-    // Guardar en backend
-    await api('/complejos/me', { method: 'PATCH', body: { foto_url } });
-    complejoData.foto_url = foto_url;
+    const logo_url = urlData.publicUrl;
+    await api('/complejos/me', { method: 'PATCH', body: { logo_url } });
+    complejoData.logo_url = logo_url;
     localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
     status.textContent = '✓ Foto guardada';
     status.style.color = 'var(--accent)';
@@ -1377,8 +1375,10 @@ async function guardarConfig() {
   const tel    = document.getElementById('cfg-tel').value.trim();
   if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
   try {
-    const body = { nombre, ciudad, telefono: tel };
-    const updated = await api('/complejos/me', { method: 'PATCH', body });
+    const updated = await api('/complejos/me', {
+      method: 'PATCH',
+      body: { nombre, ciudad, telefono: tel },
+    });
     complejoData.nombre   = updated.nombre || nombre;
     complejoData.ciudad   = updated.ciudad || ciudad;
     complejoData.telefono = updated.telefono || tel;
