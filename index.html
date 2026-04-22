@@ -721,7 +721,7 @@ let complejoData= JSON.parse(localStorage.getItem('retta_complejo_data') || 'nul
 let canchas     = [];
 let partidos    = [];
 let pagos       = [];
-let activeDate  = new Date().toISOString().split('T')[0];
+let activeDate  = toISODate(new Date());
 let realtimeSub = null;
 
 // ── Clock ──
@@ -959,6 +959,15 @@ function showScreen(name) {
 // ════════════════════════════════════════════
 // DAY TABS
 // ════════════════════════════════════════════
+
+// ── Helper fecha segura para Safari ──
+function toISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
 let dayWindowStart = 0;
 const DAYS = (() => {
   const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
@@ -969,7 +978,7 @@ const DAYS = (() => {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     arr.push({
-      iso:   d.toISOString().split('T')[0],
+      iso:   toISODate(d),
       name:  i === 0 ? 'HOY' : days[d.getDay()],
       num:   d.getDate(),
       month: months[d.getMonth()],
@@ -1246,15 +1255,16 @@ function renderDashStats(dash) {
     barChart.innerHTML = dias.map((d, i) => {
       const pct = Math.round((vals[i] / max) * 100);
       const isMax = vals[i] === Math.max(...vals);
+      const dParts = d.split('-'); const dObj = new Date(parseInt(dParts[0]),parseInt(dParts[1])-1,parseInt(dParts[2]));
       return `<div class="bar-group">
         <div class="bar ${isMax ? 'highlight' : ''}" style="height:${pct}%"></div>
-        <div class="bar-label">${names[new Date(d).getDay()]}</div>
+        <div class="bar-label">${names[dObj.getDay()]}</div>
       </div>`;
     }).join('');
   }
 
   // Stats hoy / mes
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = toISODate(new Date());
   const mesActual = hoy.slice(0, 7);
   let sumHoy = 0, sumMes = 0;
   pagos.forEach(p => {
