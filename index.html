@@ -628,7 +628,6 @@ html, body { height:100%; font-family:var(--font-body); background:var(--bg); co
                   <option value="pasto_sintetico">Pasto sintético</option>
                   <option value="duela">Duela</option>
                   <option value="cemento">Cemento</option>
-                  <option value="arena">Arena</option>
                 </select>
               </div>
               <button onclick="addCancha()" style="height:48px;padding:0 16px;background:var(--accent);border:none;border-radius:10px;cursor:pointer;font-family:var(--font-display);font-size:13px;font-weight:700;color:#000;">Agregar</button>
@@ -989,7 +988,6 @@ function formatTipo(tipo) {
     pasto_sintetico: 'Pasto sintético',
     duela:           'Duela',
     cemento:         'Cemento',
-    arena:           'Arena',
   };
   return tipos[tipo] || tipo || 'Sin tipo';
 }
