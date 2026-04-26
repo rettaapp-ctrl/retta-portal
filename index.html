@@ -622,7 +622,14 @@ html, body { height:100%; font-family:var(--font-body); background:var(--bg); co
               </div>
               <div>
                 <div class="login-label" style="margin-bottom:6px;">Tipo de superficie</div>
-                <input class="login-input" id="new-cancha-tipo" placeholder="Ej: Césped sintético" style="background:var(--surface3);">
+                <select class="login-select" id="new-cancha-tipo" style="background:var(--surface3);">
+                  <option value="">Seleccionar tipo</option>
+                  <option value="pasto_natural">Pasto natural</option>
+                  <option value="pasto_sintetico">Pasto sintético</option>
+                  <option value="duela">Duela</option>
+                  <option value="cemento">Cemento</option>
+                  <option value="arena">Arena</option>
+                </select>
               </div>
               <button onclick="addCancha()" style="height:48px;padding:0 16px;background:var(--accent);border:none;border-radius:10px;cursor:pointer;font-family:var(--font-display);font-size:13px;font-weight:700;color:#000;">Agregar</button>
             </div>
@@ -976,6 +983,16 @@ function toISODate(d) {
   const day = String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
+function formatTipo(tipo) {
+  const tipos = {
+    pasto_natural:   'Pasto natural',
+    pasto_sintetico: 'Pasto sintético',
+    duela:           'Duela',
+    cemento:         'Cemento',
+    arena:           'Arena',
+  };
+  return tipos[tipo] || tipo || 'Sin tipo';
+}
 
 let dayWindowStart = 0;
 const DAYS = (() => {
@@ -1085,7 +1102,7 @@ function renderAgenda() {
       <div class="cancha-header">
         <div class="cancha-color" style="background:${can.color_hex}"></div>
         <span class="cancha-name">${can.nombre}</span>
-        <span class="cancha-type">${can.tipo || ''}</span>
+        <span class="cancha-type">${formatTipo(can.tipo)}</span>
       </div>
       <div class="cancha-body">${slots.join('')}</div>
     </div>`;
@@ -1350,7 +1367,7 @@ function renderCanchasConfig() {
       <div style="width:10px;height:10px;border-radius:50%;background:${c.color_hex};flex-shrink:0;"></div>
       <div style="flex:1;">
         <div style="font-family:var(--font-display);font-size:13px;font-weight:800;color:#fff;">${c.nombre}</div>
-        <div style="font-family:var(--font-body);font-size:10px;color:var(--txt3);">${c.tipo || 'Sin tipo'}</div>
+        <div style="font-family:var(--font-body);font-size:10px;color:var(--txt3);">${formatTipo(c.tipo)}</div>
       </div>
       <button onclick="removeCancha('${c.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:4px;line-height:1;" title="Eliminar">×</button>
     </div>`).join('');
