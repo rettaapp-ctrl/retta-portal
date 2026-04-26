@@ -759,6 +759,15 @@ async function api(path, opts = {}) {
     },
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
+
+  // Token expirado — cerrar sesión automáticamente
+  if (res.status === 401) {
+    doLogout();
+    const loginErr = document.getElementById('login-error');
+    if (loginErr) loginErr.textContent = 'Tu sesión expiró. Por favor inicia sesión de nuevo.';
+    throw new Error('Sesión expirada');
+  }
+
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error del servidor');
   return data;
