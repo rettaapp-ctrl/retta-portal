@@ -479,6 +479,14 @@ html, body { height:100%; font-family:var(--font-body); background:var(--bg); co
         </div>
         <span class="nav-label">Pagos</span>
       </a>
+      <span class="nav-section-label" style="margin-top:8px;">Comunicación</span>
+      <a class="nav-item" id="nav-notifs" onclick="showScreen('notifs')">
+        <div class="nav-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <span class="nav-label">Notificaciones</span>
+        <span class="nav-badge" id="badge-notifs" style="display:none;">0</span>
+      </a>
       <span class="nav-section-label" style="margin-top:8px;">Sistema</span>
       <a class="nav-item" id="nav-configuracion" onclick="showScreen('configuracion')">
         <div class="nav-icon">
@@ -561,6 +569,17 @@ html, body { height:100%; font-family:var(--font-body); background:var(--bg); co
           <div class="chart-big-num" id="chart-total-semana">$—</div>
           <div class="bar-chart" id="bar-chart" style="margin-top:16px;"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- NOTIFICACIONES -->
+    <div class="screen" id="screen-notifs">
+      <div class="content">
+        <div class="section-hdr">
+          <span class="section-title">Notificaciones</span>
+          <button id="notifs-mark-all" onclick="marcarTodasLeidas()" style="height:30px;padding:0 12px;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt2);display:none;">Marcar todas leídas</button>
+        </div>
+        <div id="notifs-list" style="display:flex;flex-direction:column;gap:8px;"><div class="spinner"></div></div>
       </div>
     </div>
 
@@ -841,6 +860,11 @@ async function initApp() {
   renderDayTabs();
   await loadPartidos();
 
+  // Cargar notificaciones para mostrar el badge inicial
+  loadNotifs().catch(()=>{});
+  // Polling cada 60s para que el badge se actualice sin recargar
+  setInterval(() => { loadNotifs().catch(()=>{}); }, 60_000);
+
   // Suscripción realtime Supabase
   setupRealtime();
 
@@ -864,6 +888,9 @@ window.addCancha             = addCancha;
 window.removeCancha          = removeCancha;
 window.guardarConfig         = guardarConfig;
 window.handleFotoChange      = handleFotoChange;
+window.marcarLeida           = marcarLeida;
+window.marcarTodasLeidas     = marcarTodasLeidas;
+window.eliminarNotifComp     = eliminarNotifComp;
 
 // Auto-login si hay token guardado
 window.addEventListener('DOMContentLoaded', async () => {
@@ -965,10 +992,109 @@ function showScreen(name) {
   document.getElementById('screen-' + name).classList.add('active');
   const nav = document.getElementById('nav-' + name);
   if (nav) nav.classList.add('active');
-  const titles = { agenda:'Agenda', pagos:'Pagos', configuracion:'Configuración' };
+  const titles = { agenda:'Agenda', pagos:'Pagos', notifs:'Notificaciones', configuracion:'Configuración' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   if (name === 'pagos') loadPagos();
   if (name === 'configuracion') renderConfigForm();
+  if (name === 'notifs') loadNotifs();
+}
+
+// ── Notificaciones del complejo ──
+let allNotifs = [];
+
+async function loadNotifs() {
+  try {
+    const d = await api('/complejos/me/notificaciones');
+    allNotifs = d.notificaciones || [];
+    renderNotifs();
+    updateNotifsBadge();
+  } catch (e) {
+    document.getElementById('notifs-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--txt3);">No se pudieron cargar las notificaciones</div>';
+  }
+}
+
+function updateNotifsBadge() {
+  const noLeidas = allNotifs.filter(n => !n.leida).length;
+  const badge = document.getElementById('badge-notifs');
+  if (noLeidas > 0) {
+    badge.textContent = noLeidas;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderNotifs() {
+  const list = document.getElementById('notifs-list');
+  const markBtn = document.getElementById('notifs-mark-all');
+  if (!allNotifs.length) {
+    list.innerHTML = '<div style="text-align:center;padding:60px 20px;background:var(--surface);border:1px dashed var(--border2);border-radius:14px;color:var(--txt3);"><div style="font-size:32px;margin-bottom:12px;">🔔</div><div style="font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--txt2);margin-bottom:6px;">Sin notificaciones</div><div style="font-size:12px;">Te avisaremos cuando haya algo nuevo de Retta.</div></div>';
+    markBtn.style.display = 'none';
+    return;
+  }
+  const noLeidas = allNotifs.filter(n => !n.leida).length;
+  markBtn.style.display = noLeidas > 0 ? '' : 'none';
+
+  const tipoColors = {
+    retta:        ['rgba(122,184,0,0.15)', 'var(--accent)'],
+    recordatorio: ['rgba(255,149,0,0.15)', '#FF9500'],
+    warning:      ['rgba(214,43,43,0.15)', '#D62B2B'],
+    resultado:    ['rgba(43,127,255,0.15)', '#2B7FFF'],
+  };
+
+  list.innerHTML = allNotifs.map(n => {
+    const [bg, col] = tipoColors[n.tipo] || ['var(--surface3)', 'var(--txt2)'];
+    const fecha = new Date(n.created_at);
+    const ahora = new Date();
+    const diff = Math.floor((ahora - fecha) / 1000);
+    let tiempo;
+    if (diff < 60) tiempo = 'Ahora';
+    else if (diff < 3600) tiempo = `Hace ${Math.floor(diff/60)} min`;
+    else if (diff < 86400) tiempo = `Hace ${Math.floor(diff/3600)} h`;
+    else tiempo = fecha.toLocaleDateString('es-MX', { day:'numeric', month:'short' });
+    return `
+      <div onclick="marcarLeida('${n.id}')" style="background:var(--surface);border:1px solid ${n.leida ? 'var(--border)' : 'rgba(122,184,0,0.3)'};border-radius:12px;padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:background .15s;${!n.leida ? 'background:rgba(122,184,0,0.04);' : ''}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${!n.leida ? 'rgba(122,184,0,0.04)' : 'var(--surface)'}'">
+        <div style="width:36px;height:36px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${col};font-size:18px;">📣</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <div style="font-family:var(--font-display);font-size:13px;font-weight:800;color:var(--txt);">${n.titulo}</div>
+            ${!n.leida ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>' : ''}
+          </div>
+          ${n.cuerpo ? `<div style="font-size:12px;color:var(--txt2);line-height:1.5;">${n.cuerpo}</div>` : ''}
+          <div style="font-size:10px;color:var(--txt3);margin-top:6px;font-family:var(--font-display);letter-spacing:.04em;">${tiempo}</div>
+        </div>
+        <button onclick="event.stopPropagation();eliminarNotifComp('${n.id}')" style="background:none;border:none;cursor:pointer;color:var(--txt3);padding:4px;flex-shrink:0;" onmouseover="this.style.color='#D62B2B'" onmouseout="this.style.color='var(--txt3)'" title="Eliminar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14H7L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function marcarLeida(id) {
+  const notif = allNotifs.find(n => n.id === id);
+  if (!notif || notif.leida) return;
+  try {
+    await api(`/complejos/me/notificaciones/${id}/leer`, { method:'PATCH' });
+    notif.leida = true;
+    renderNotifs();
+    updateNotifsBadge();
+  } catch (e) {}
+}
+
+async function marcarTodasLeidas() {
+  const noLeidas = allNotifs.filter(n => !n.leida);
+  await Promise.all(noLeidas.map(n => marcarLeida(n.id)));
+}
+
+async function eliminarNotifComp(id) {
+  if (!confirm('¿Eliminar esta notificación?')) return;
+  try {
+    await api(`/complejos/me/notificaciones/${id}`, { method:'DELETE' });
+    allNotifs = allNotifs.filter(n => n.id !== id);
+    renderNotifs();
+    updateNotifsBadge();
+  } catch (e) {}
 }
 
 // ════════════════════════════════════════════
