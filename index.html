@@ -740,9 +740,21 @@ const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmF
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+// ── XSS hardening: escapar texto al inyectar via innerHTML ──
+function escapeHTML(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ── Estado de la sesión ──
-let authToken   = localStorage.getItem('retta_complejo_token') || null;
-let complejoData= JSON.parse(localStorage.getItem('retta_complejo_data') || 'null');
+// Token y datos del complejo en sessionStorage (se limpian al cerrar la pestaña)
+let authToken   = sessionStorage.getItem('retta_complejo_token') || null;
+let complejoData= JSON.parse(sessionStorage.getItem('retta_complejo_data') || 'null');
 let canchas     = [];
 let partidos    = [];
 let pagos       = [];
@@ -816,8 +828,8 @@ async function doLogin() {
     });
     authToken    = data.token;
     complejoData = data.complejo;
-    localStorage.setItem('retta_complejo_token', authToken);
-    localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+    sessionStorage.setItem('retta_complejo_token', authToken);
+    sessionStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
     await initApp();
   } catch (e) {
     err.textContent = e.message;
@@ -829,8 +841,8 @@ async function doLogin() {
 
 function doLogout() {
   authToken = null; complejoData = null;
-  localStorage.removeItem('retta_complejo_token');
-  localStorage.removeItem('retta_complejo_data');
+  sessionStorage.removeItem('retta_complejo_token');
+  sessionStorage.removeItem('retta_complejo_data');
   if (realtimeSub) supabaseClient.removeChannel(realtimeSub);
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app-main').style.display = 'none';
@@ -1052,18 +1064,22 @@ function renderNotifs() {
     else if (diff < 3600) tiempo = `Hace ${Math.floor(diff/60)} min`;
     else if (diff < 86400) tiempo = `Hace ${Math.floor(diff/3600)} h`;
     else tiempo = fecha.toLocaleDateString('es-MX', { day:'numeric', month:'short' });
+    // XSS hardening: escapar id, titulo y cuerpo (vienen del backend)
+    const safeId     = escapeHTML(n.id);
+    const safeTitulo = escapeHTML(n.titulo);
+    const safeCuerpo = escapeHTML(n.cuerpo);
     return `
-      <div onclick="marcarLeida('${n.id}')" style="background:var(--surface);border:1px solid ${n.leida ? 'var(--border)' : 'rgba(122,184,0,0.3)'};border-radius:12px;padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:background .15s;${!n.leida ? 'background:rgba(122,184,0,0.04);' : ''}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${!n.leida ? 'rgba(122,184,0,0.04)' : 'var(--surface)'}'">
+      <div onclick="marcarLeida('${safeId}')" style="background:var(--surface);border:1px solid ${n.leida ? 'var(--border)' : 'rgba(122,184,0,0.3)'};border-radius:12px;padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:background .15s;${!n.leida ? 'background:rgba(122,184,0,0.04);' : ''}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${!n.leida ? 'rgba(122,184,0,0.04)' : 'var(--surface)'}'">
         <div style="width:36px;height:36px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${col};font-size:18px;">📣</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-            <div style="font-family:var(--font-display);font-size:13px;font-weight:800;color:var(--txt);">${n.titulo}</div>
+            <div style="font-family:var(--font-display);font-size:13px;font-weight:800;color:var(--txt);">${safeTitulo}</div>
             ${!n.leida ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>' : ''}
           </div>
-          ${n.cuerpo ? `<div style="font-size:12px;color:var(--txt2);line-height:1.5;">${n.cuerpo}</div>` : ''}
+          ${n.cuerpo ? `<div style="font-size:12px;color:var(--txt2);line-height:1.5;">${safeCuerpo}</div>` : ''}
           <div style="font-size:10px;color:var(--txt3);margin-top:6px;font-family:var(--font-display);letter-spacing:.04em;">${tiempo}</div>
         </div>
-        <button onclick="event.stopPropagation();eliminarNotifComp('${n.id}')" style="background:none;border:none;cursor:pointer;color:var(--txt3);padding:4px;flex-shrink:0;" onmouseover="this.style.color='#D62B2B'" onmouseout="this.style.color='var(--txt3)'" title="Eliminar">
+        <button onclick="event.stopPropagation();eliminarNotifComp('${safeId}')" style="background:none;border:none;cursor:pointer;color:var(--txt3);padding:4px;flex-shrink:0;" onmouseover="this.style.color='#D62B2B'" onmouseout="this.style.color='var(--txt3)'" title="Eliminar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14H7L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         </button>
       </div>
@@ -1199,6 +1215,8 @@ function renderAgenda() {
 
   const HORARIOS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
 
+  // XSS hardening: en lugar de pasar JSON.stringify(partido) al onclick (vulnerable a
+  // ruptura de atributo), referenciamos por id y openModalById lo busca en el global.
   grid.innerHTML = canchas.map(can => {
     const matchesHere = partidos.filter(p => p.cancha_id === can.id);
     const slots = HORARIOS.map(hora => {
@@ -1206,14 +1224,20 @@ function renderAgenda() {
       if (partido) {
         const pct   = (partido.jugadores_confirmados || 0) / partido.max_jugadores;
         const fill  = pct >= 0.8 ? '' : pct < 0.5 ? 'low' : 'warn';
-        return `<div class="slot-row" onclick='openModal(${JSON.stringify(partido)})'>
+        const safePid    = escapeHTML(partido.id);
+        const safeTipo   = escapeHTML(partido.tipo);
+        const safeStatus = escapeHTML(partido.status);
+        const precioNum  = Number(partido.precio_jugador) || 0;
+        const jugConf    = Number(partido.jugadores_confirmados) || 0;
+        const maxJug     = Number(partido.max_jugadores) || 0;
+        return `<div class="slot-row" onclick="openModalById('${safePid}')">
           <div class="slot-time">${hora}</div>
           <div class="slot-info">
-            <div class="slot-tipo">${partido.tipo} · ${partido.precio_jugador ? '$' + partido.precio_jugador : ''}</div>
-            <div class="slot-jug">${partido.jugadores_confirmados || 0}/${partido.max_jugadores} jugadores</div>
+            <div class="slot-tipo">${safeTipo} · ${precioNum ? '$' + precioNum : ''}</div>
+            <div class="slot-jug">${jugConf}/${maxJug} jugadores</div>
           </div>
-          <span class="status-pill ${partido.status}" style="font-size:9px;padding:2px 7px;">
-            <span class="sp-dot"></span>${statusLabel(partido.status)}
+          <span class="status-pill ${safeStatus}" style="font-size:9px;padding:2px 7px;">
+            <span class="sp-dot"></span>${escapeHTML(statusLabel(partido.status))}
           </span>
         </div>`;
       }
@@ -1222,15 +1246,23 @@ function renderAgenda() {
         <div class="slot-empty">Disponible</div>
       </div>`;
     });
+    // can.color_hex se inserta en CSS — solo permitir hex válido
+    const safeColor = /^#[0-9a-fA-F]{3,8}$/.test(can.color_hex || '') ? can.color_hex : '#888';
     return `<div class="cancha-card">
       <div class="cancha-header">
-        <div class="cancha-color" style="background:${can.color_hex}"></div>
-        <span class="cancha-name">${can.nombre}</span>
-        <span class="cancha-type">${formatTipo(can.tipo)}</span>
+        <div class="cancha-color" style="background:${safeColor}"></div>
+        <span class="cancha-name">${escapeHTML(can.nombre)}</span>
+        <span class="cancha-type">${escapeHTML(formatTipo(can.tipo))}</span>
       </div>
       <div class="cancha-body">${slots.join('')}</div>
     </div>`;
   }).join('');
+}
+
+// Helper para abrir el modal a partir de un id (evita inyectar JSON en atributos)
+function openModalById(id) {
+  const p = partidos.find(x => String(x.id) === String(id));
+  if (p) openModal(p);
 }
 
 function renderAgendaEmpty() {
@@ -1257,12 +1289,22 @@ function openModal(p) {
   const equipoB = (p.jugadores || []).filter(j => j.equipo === 'B');
   const jugConf = p.jugadores_confirmados || equipoA.length + equipoB.length;
 
+  // XSS hardening: escapar todos los datos de partido y jugadores antes de inyectar
+  const safeTipo    = escapeHTML(p.tipo);
+  const safePrecio  = Number(p.precio_jugador) || 0;
+  const safeStatus  = escapeHTML(p.status);
+  const safeStatusL = escapeHTML(statusLabel(p.status));
+  const safeMaxJug  = Number(p.max_jugadores) || 0;
+  const safeJugConf = Number(jugConf) || 0;
+  const safeNotas   = escapeHTML(p.notas);
+  const safePid     = escapeHTML(p.id);
+
   document.getElementById('modal-body').innerHTML = `
-    <div class="modal-row"><span class="modal-key">Tipo</span><span class="modal-val">${p.tipo}</span></div>
-    <div class="modal-row"><span class="modal-key">Precio por jugador</span><span class="modal-val">$${p.precio_jugador} MXN</span></div>
-    <div class="modal-row"><span class="modal-key">Estado</span><span class="modal-val"><span class="status-pill ${p.status}"><span class="sp-dot"></span>${statusLabel(p.status)}</span></span></div>
-    <div class="modal-row"><span class="modal-key">Jugadores</span><span class="modal-val">${jugConf} / ${p.max_jugadores}</span></div>
-    ${p.notas ? `<div class="modal-row"><span class="modal-key">Notas</span><span class="modal-val">${p.notas}</span></div>` : ''}
+    <div class="modal-row"><span class="modal-key">Tipo</span><span class="modal-val">${safeTipo}</span></div>
+    <div class="modal-row"><span class="modal-key">Precio por jugador</span><span class="modal-val">$${safePrecio} MXN</span></div>
+    <div class="modal-row"><span class="modal-key">Estado</span><span class="modal-val"><span class="status-pill ${safeStatus}"><span class="sp-dot"></span>${safeStatusL}</span></span></div>
+    <div class="modal-row"><span class="modal-key">Jugadores</span><span class="modal-val">${safeJugConf} / ${safeMaxJug}</span></div>
+    ${p.notas ? `<div class="modal-row"><span class="modal-key">Notas</span><span class="modal-val">${safeNotas}</span></div>` : ''}
     <div style="margin-top:14px;">
       <div style="font-family:var(--font-display);font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px;">
         Equipo A (${equipoA.length})
@@ -1270,8 +1312,8 @@ function openModal(p) {
       ${equipoA.length ? equipoA.map((j, i) => `
         <div class="modal-j">
           <span class="modal-j-num">${i+1}</span>
-          <div class="modal-j-avatar" style="background:${colors[i%colors.length]}">${(j.nombre||'?')[0]}</div>
-          <span class="modal-j-name">${j.nombre} ${j.apellido||''}</span>
+          <div class="modal-j-avatar" style="background:${colors[i%colors.length]}">${escapeHTML((j.nombre||'?')[0])}</div>
+          <span class="modal-j-name">${escapeHTML(j.nombre)} ${escapeHTML(j.apellido||'')}</span>
           <span class="j-equipo-tag a">A</span>
         </div>`).join('') : '<div style="font-family:var(--font-body);font-size:11px;color:var(--txt3);padding:6px 0;">Sin jugadores aún</div>'}
       <div style="font-family:var(--font-display);font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--txt3);margin-top:12px;margin-bottom:8px;">
@@ -1280,8 +1322,8 @@ function openModal(p) {
       ${equipoB.length ? equipoB.map((j, i) => `
         <div class="modal-j">
           <span class="modal-j-num">${i+1}</span>
-          <div class="modal-j-avatar" style="background:${colors[(i+3)%colors.length]}">${(j.nombre||'?')[0]}</div>
-          <span class="modal-j-name">${j.nombre} ${j.apellido||''}</span>
+          <div class="modal-j-avatar" style="background:${colors[(i+3)%colors.length]}">${escapeHTML((j.nombre||'?')[0])}</div>
+          <span class="modal-j-name">${escapeHTML(j.nombre)} ${escapeHTML(j.apellido||'')}</span>
           <span class="j-equipo-tag b">B</span>
         </div>`).join('') : '<div style="font-family:var(--font-body);font-size:11px;color:var(--txt3);padding:6px 0;">Sin jugadores aún</div>'}
     </div>`;
@@ -1289,7 +1331,7 @@ function openModal(p) {
   const footer = document.getElementById('modal-footer');
   if (p.status !== 'cancelado' && p.status !== 'finalizado') {
     footer.style.display = 'flex';
-    footer.innerHTML = `<button class="modal-btn-cancel" onclick="cancelarPartido('${p.id}')">Cancelar partido</button>`;
+    footer.innerHTML = `<button class="modal-btn-cancel" onclick="cancelarPartido('${safePid}')">Cancelar partido</button>`;
   } else {
     footer.style.display = 'none';
   }
@@ -1318,7 +1360,8 @@ function closeModal() {
 function populateCanchaSelect() {
   const sel = document.getElementById('np-cancha');
   if (!sel) return;
-  sel.innerHTML = canchas.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  // XSS hardening: escapar id (atributo) y nombre (texto)
+  sel.innerHTML = canchas.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.nombre)}</option>`).join('');
 }
 
 function openNuevoPartidoModal() {
@@ -1372,14 +1415,15 @@ function renderPagos() {
     list.innerHTML = '<div class="empty-state"><div class="empty-text">Sin pagos registrados</div></div>';
     return;
   }
+  // XSS hardening: nombre y campos del backend pueden ser controlados por el jugador
   list.innerHTML = pagos.map(p => {
     const nombre = p.usuarios ? `${p.usuarios.nombre} ${p.usuarios.apellido || ''}`.trim() : 'Jugador';
     const fecha  = p.partidos?.fecha || p.created_at?.split('T')[0] || '—';
     const hora   = p.partidos?.hora_inicio?.slice(0,5) || '—';
     return `<div class="pago-row">
-      <div><div class="pr-name">${nombre}</div><div class="pr-sub">${fecha}</div></div>
-      <div class="pr-val">${hora}</div>
-      <div class="pr-val">${fecha}</div>
+      <div><div class="pr-name">${escapeHTML(nombre)}</div><div class="pr-sub">${escapeHTML(fecha)}</div></div>
+      <div class="pr-val">${escapeHTML(hora)}</div>
+      <div class="pr-val">${escapeHTML(fecha)}</div>
       <div class="pr-amount">$${Number(p.monto).toLocaleString('es-MX')} MXN</div>
       <div><span class="status-pill confirmado"><span class="sp-dot"></span>Completado</span></div>
     </div>`;
@@ -1438,7 +1482,13 @@ function renderConfigForm() {
   document.getElementById('cfg-email').value     = complejoData.email     || '';
   const preview = document.getElementById('cfg-foto-preview');
   if (preview && complejoData.logo_url) {
-    preview.innerHTML = `<img src="${complejoData.logo_url}" style="width:100%;height:100%;object-fit:cover;">`;
+    // XSS hardening: construir <img> con createElement para evitar inyección por la URL
+    const img = document.createElement('img');
+    img.src = complejoData.logo_url;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
+    preview.replaceChildren(img);
   }
   renderCanchasConfig();
 }
@@ -1454,7 +1504,13 @@ async function handleFotoChange(event) {
     // Preview local inmediato
     const reader = new FileReader();
     reader.onload = e => {
-      preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+      // XSS hardening: createElement para evitar inyección por data URL
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      preview.replaceChildren(img);
     };
     reader.readAsDataURL(file);
     // Subir a Supabase Storage
@@ -1468,7 +1524,7 @@ async function handleFotoChange(event) {
     const logo_url = urlData.publicUrl;
     await api('/complejos/me', { method: 'PATCH', body: { logo_url } });
     complejoData.logo_url = logo_url;
-    localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+    sessionStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
     status.textContent = '✓ Foto guardada';
     status.style.color = 'var(--accent)';
     showToast('Foto actualizada', 'success');
@@ -1486,15 +1542,19 @@ function renderCanchasConfig() {
     list.innerHTML = '<div class="empty-state"><div class="empty-text">Sin canchas</div></div>';
     return;
   }
-  list.innerHTML = canchas.map((c, i) => `
+  // XSS hardening: validar color_hex (CSS) y escapar texto + id
+  list.innerHTML = canchas.map((c, i) => {
+    const safeColor = /^#[0-9a-fA-F]{3,8}$/.test(c.color_hex || '') ? c.color_hex : '#888';
+    return `
     <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
-      <div style="width:10px;height:10px;border-radius:50%;background:${c.color_hex};flex-shrink:0;"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${safeColor};flex-shrink:0;"></div>
       <div style="flex:1;">
-        <div style="font-family:var(--font-display);font-size:13px;font-weight:800;color:#fff;">${c.nombre}</div>
-        <div style="font-family:var(--font-body);font-size:10px;color:var(--txt3);">${formatTipo(c.tipo)}</div>
+        <div style="font-family:var(--font-display);font-size:13px;font-weight:800;color:#fff;">${escapeHTML(c.nombre)}</div>
+        <div style="font-family:var(--font-body);font-size:10px;color:var(--txt3);">${escapeHTML(formatTipo(c.tipo))}</div>
       </div>
-      <button onclick="removeCancha('${c.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:4px;line-height:1;" title="Eliminar">×</button>
-    </div>`).join('');
+      <button onclick="removeCancha('${escapeHTML(c.id)}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:4px;line-height:1;" title="Eliminar">×</button>
+    </div>`;
+  }).join('');
 }
 
 function showAddCanchaForm() {
@@ -1556,7 +1616,7 @@ async function guardarConfig() {
     complejoData.telefono  = updated.telefono  || tel;
     complejoData.direccion = updated.direccion || direccion;
     complejoData.email     = updated.email     || email;
-    localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+    sessionStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
     document.getElementById('sidebar-complejo-name').textContent = nombre;
     showToast('Configuración guardada', 'success');
   } catch (e) {
