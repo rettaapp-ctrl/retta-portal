@@ -753,8 +753,8 @@ function escapeHTML(str) {
 
 // ── Estado de la sesión ──
 // Token y datos del complejo en sessionStorage (se limpian al cerrar la pestaña)
-let authToken   = sessionStorage.getItem('retta_complejo_token') || null;
-let complejoData= JSON.parse(sessionStorage.getItem('retta_complejo_data') || 'null');
+let authToken   = localStorage.getItem('retta_complejo_token') || null;
+let complejoData= JSON.parse(localStorage.getItem('retta_complejo_data') || 'null');
 let canchas     = [];
 let partidos    = [];
 let pagos       = [];
@@ -797,8 +797,10 @@ async function api(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
 
-  // Token expirado — cerrar sesión automáticamente
-  if (res.status === 401) {
+  // Token expirado — cerrar sesión automáticamente.
+  // Solo tratar 401 como "sesión expirada" si TENÍAMOS token (sesión activa).
+  // Si NO hay token, un 401 viene de credenciales inválidas en login.
+  if (res.status === 401 && authToken) {
     doLogout();
     const loginErr = document.getElementById('login-error');
     if (loginErr) loginErr.textContent = 'Tu sesión expiró. Por favor inicia sesión de nuevo.';
@@ -828,8 +830,8 @@ async function doLogin() {
     });
     authToken    = data.token;
     complejoData = data.complejo;
-    sessionStorage.setItem('retta_complejo_token', authToken);
-    sessionStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+    localStorage.setItem('retta_complejo_token', authToken);
+    localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
     await initApp();
   } catch (e) {
     err.textContent = e.message;
@@ -841,8 +843,8 @@ async function doLogin() {
 
 function doLogout() {
   authToken = null; complejoData = null;
-  sessionStorage.removeItem('retta_complejo_token');
-  sessionStorage.removeItem('retta_complejo_data');
+  localStorage.removeItem('retta_complejo_token');
+  localStorage.removeItem('retta_complejo_data');
   if (realtimeSub) supabaseClient.removeChannel(realtimeSub);
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app-main').style.display = 'none';
@@ -1524,7 +1526,7 @@ async function handleFotoChange(event) {
     const logo_url = urlData.publicUrl;
     await api('/complejos/me', { method: 'PATCH', body: { logo_url } });
     complejoData.logo_url = logo_url;
-    sessionStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+    localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
     status.textContent = '✓ Foto guardada';
     status.style.color = 'var(--accent)';
     showToast('Foto actualizada', 'success');
@@ -1616,7 +1618,7 @@ async function guardarConfig() {
     complejoData.telefono  = updated.telefono  || tel;
     complejoData.direccion = updated.direccion || direccion;
     complejoData.email     = updated.email     || email;
-    sessionStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
+    localStorage.setItem('retta_complejo_data', JSON.stringify(complejoData));
     document.getElementById('sidebar-complejo-name').textContent = nombre;
     showToast('Configuración guardada', 'success');
   } catch (e) {
