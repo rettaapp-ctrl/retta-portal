@@ -7,7 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<!-- Pin versión específica + crossorigin para mitigar supply chain attacks.
+     Versión 2.45.4 verificada al 2026-05-05. Actualizar manualmente cuando se quiera bumpear. -->
+<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root {
@@ -432,7 +434,7 @@ html, body { height:100%; font-family:var(--font-body); background:var(--bg); co
       <div class="login-title">Retta</div>
       <div class="login-subtitle">Panel de Complejos</div>
     </div>
-    <div class="login-form">
+    <div class="login-form" id="login-form">
       <div>
         <div class="login-label" style="margin-bottom:6px;">Email</div>
         <input class="login-input" type="email" id="login-email" placeholder="admin@complejo.mx" autocomplete="email">
@@ -444,7 +446,52 @@ html, body { height:100%; font-family:var(--font-body); background:var(--bg); co
       </div>
       <div class="login-error" id="login-error"></div>
       <button class="login-btn" id="login-btn" onclick="doLogin()">Iniciar sesión</button>
+      <a href="javascript:void(0)" id="forgot-link" onclick="showAuthScreen('forgot')"
+         style="font-family:var(--font-body);font-size:12px;color:var(--txt2);text-align:center;margin-top:8px;text-decoration:none;cursor:pointer;display:block;">
+        ¿Olvidaste tu contraseña?
+      </a>
       <p class="login-hint">Acceso exclusivo para administradores<br>de complejos afiliados a Retta.</p>
+    </div>
+    <!-- ── PANTALLA: Olvidé contraseña ── -->
+    <div class="login-form" id="forgot-form" style="display:none;">
+      <div>
+        <div class="login-label" style="margin-bottom:6px;">Email</div>
+        <input class="login-input" type="email" id="forgot-email" placeholder="admin@complejo.mx" autocomplete="email"
+          onkeydown="if(event.key==='Enter')doForgotPassword()">
+      </div>
+      <div class="login-error" id="forgot-error" style="color:var(--txt2);"></div>
+      <button class="login-btn" id="forgot-btn" onclick="doForgotPassword()">Enviar código</button>
+      <a href="javascript:void(0)" onclick="showAuthScreen('login')"
+         style="font-family:var(--font-body);font-size:12px;color:var(--txt2);text-align:center;margin-top:8px;text-decoration:none;cursor:pointer;display:block;">
+        Volver al inicio de sesión
+      </a>
+      <p class="login-hint">
+        Te enviaremos un código de 6 dígitos<br>para restablecer tu contraseña.
+      </p>
+    </div>
+    <!-- ── PANTALLA: Reset (código + nueva contraseña) ── -->
+    <div class="login-form" id="reset-form" style="display:none;">
+      <div>
+        <div class="login-label" style="margin-bottom:6px;">Código (6 dígitos)</div>
+        <input class="login-input" type="text" id="reset-codigo" maxlength="6" inputmode="numeric"
+          autocomplete="one-time-code" placeholder="123456">
+      </div>
+      <div>
+        <div class="login-label" style="margin-bottom:6px;">Nueva contraseña</div>
+        <input class="login-input" type="password" id="reset-pass1" placeholder="Mínimo 6 caracteres"
+          autocomplete="new-password">
+      </div>
+      <div>
+        <div class="login-label" style="margin-bottom:6px;">Confirmar contraseña</div>
+        <input class="login-input" type="password" id="reset-pass2" placeholder="Repite la contraseña"
+          autocomplete="new-password" onkeydown="if(event.key==='Enter')doResetPassword()">
+      </div>
+      <div class="login-error" id="reset-error"></div>
+      <button class="login-btn" id="reset-btn" onclick="doResetPassword()">Cambiar contraseña</button>
+      <a href="javascript:void(0)" onclick="showAuthScreen('login')"
+         style="font-family:var(--font-body);font-size:12px;color:var(--txt2);text-align:center;margin-top:8px;text-decoration:none;cursor:pointer;display:block;">
+        Volver al inicio de sesión
+      </a>
     </div>
   </div>
 </div>
@@ -850,6 +897,113 @@ function doLogout() {
   document.getElementById('app-main').style.display = 'none';
   document.getElementById('login-email').value = '';
   document.getElementById('login-pass').value = '';
+  showAuthScreen('login');
+}
+
+// ════════════════════════════════════════════
+// AUTH — Olvidé contraseña / Reset
+// ════════════════════════════════════════════
+// Email memorizado entre la pantalla "forgot" y la "reset".
+let forgotEmailMemo = '';
+
+function showAuthScreen(name) {
+  const ids = { login: 'login-form', forgot: 'forgot-form', reset: 'reset-form' };
+  Object.entries(ids).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (k === name) ? 'flex' : 'none';
+  });
+  // Limpiar errores al cambiar
+  ['login-error', 'forgot-error', 'reset-error'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const btn   = document.getElementById('forgot-btn');
+  const err   = document.getElementById('forgot-error');
+  err.style.color = 'var(--txt2)';
+  err.textContent = '';
+  if (!email) { err.style.color = '#FF6B6B'; err.textContent = 'Ingresa tu email'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    await api('/auth/complejos/forgot-password', {
+      method: 'POST', body: { email }
+    });
+    forgotEmailMemo = email.toLowerCase();
+    err.style.color = 'var(--accent)';
+    err.textContent = 'Si el email existe, te enviamos un código.';
+    // Pequeño delay para que el usuario alcance a leer el mensaje y luego pase al reset
+    setTimeout(() => {
+      showAuthScreen('reset');
+      const codigoInput = document.getElementById('reset-codigo');
+      if (codigoInput) codigoInput.focus();
+    }, 1200);
+  } catch (e) {
+    err.style.color = '#FF6B6B';
+    err.textContent = escapeHTML(e.message || 'No se pudo enviar el código');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar código';
+  }
+}
+
+async function doResetPassword() {
+  const codigo = document.getElementById('reset-codigo').value.trim();
+  const pass1  = document.getElementById('reset-pass1').value;
+  const pass2  = document.getElementById('reset-pass2').value;
+  const btn    = document.getElementById('reset-btn');
+  const err    = document.getElementById('reset-error');
+  err.style.color = '#FF6B6B';
+  err.textContent = '';
+
+  if (!forgotEmailMemo) {
+    err.textContent = 'Vuelve a iniciar el flujo de recuperación.';
+    setTimeout(() => showAuthScreen('forgot'), 800);
+    return;
+  }
+  if (!codigo || codigo.length !== 6) {
+    err.textContent = 'Ingresa el código de 6 dígitos';
+    return;
+  }
+  if (!pass1 || pass1.length < 6) {
+    err.textContent = 'La contraseña debe tener al menos 6 caracteres';
+    return;
+  }
+  if (pass1 !== pass2) {
+    err.textContent = 'Las contraseñas no coinciden';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Cambiando...';
+  try {
+    await api('/auth/complejos/reset-password', {
+      method: 'POST',
+      body: { email: forgotEmailMemo, codigo, password_nueva: pass1 }
+    });
+    err.style.color = 'var(--accent)';
+    err.textContent = 'Contraseña restablecida. Inicia sesión.';
+    // Limpiar campos
+    document.getElementById('reset-codigo').value = '';
+    document.getElementById('reset-pass1').value  = '';
+    document.getElementById('reset-pass2').value  = '';
+    forgotEmailMemo = '';
+    setTimeout(() => {
+      showAuthScreen('login');
+      const emailInput = document.getElementById('login-email');
+      if (emailInput) emailInput.focus();
+    }, 1500);
+  } catch (e) {
+    err.style.color = '#FF6B6B';
+    err.textContent = escapeHTML(e.message || 'No se pudo cambiar la contraseña');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Cambiar contraseña';
+  }
 }
 
 // ════════════════════════════════════════════
@@ -888,6 +1042,9 @@ async function initApp() {
 // ── Exponer funciones globalmente para onclick inline ──
 window.doLogin               = doLogin;
 window.doLogout              = doLogout;
+window.showAuthScreen        = showAuthScreen;
+window.doForgotPassword      = doForgotPassword;
+window.doResetPassword       = doResetPassword;
 window.showScreen            = showScreen;
 window.shiftDays             = shiftDays;
 window.selectDay             = selectDay;
