@@ -1,0 +1,13 @@
+{
+  // Cloudflare Workers config para servir el portal de complejos como sitio estático.
+  // Compatible con _headers (lo mismo que Pages clásico).
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "retta-portal",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    // Servir todo el repo como estático. _headers se respeta automáticamente.
+    "directory": "./",
+    // Si una ruta no matchea ningún archivo, devolver el 404 propio (no SPA)
+    "not_found_handling": "404-page"
+  }
+}
