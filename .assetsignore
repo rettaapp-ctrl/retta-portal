@@ -1,0 +1,37 @@
+# Archivos que NO se deben servir como assets públicos.
+# Equivalente al "auto-ignore" que hacía Vercel.
+
+# Git internals (CRÍTICO — expone historial completo del repo)
+.git/**
+.gitignore
+.gitattributes
+
+# Cloudflare workspace (no debe ser público)
+.wrangler/**
+wrangler.jsonc
+wrangler.toml
+
+# Vercel legacy (lo dejamos en el repo por rollback, pero no se sirve)
+vercel.json
+.vercel/**
+
+# Docs / dev files
+README*
+*.md
+CHANGELOG*
+LICENSE*
+.env*
+.editorconfig
+.eslintrc*
+.prettierrc*
+
+# Node
+node_modules/**
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE
+.vscode/**
+.idea/**
+.DS_Store
