@@ -1528,8 +1528,58 @@ function populateCanchaSelect() {
   sel.innerHTML = canchas.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.nombre)}</option>`).join('');
 }
 
+// Todas las horas posibles del día (los <option> originales del select de hora)
+const HORAS_POSIBLES = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
+
+// Devuelve fecha de hoy en formato YYYY-MM-DD en hora local (no UTC)
+function hoyLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+// Re-llena el select de hora dejando solo las opciones FUTURAS si la
+// fecha seleccionada es hoy. Si la fecha es futura, muestra todas.
+function actualizarHorasDisponibles() {
+  const fechaInput = document.getElementById('np-fecha');
+  const horaSel    = document.getElementById('np-hora');
+  const fechaSel   = fechaInput.value;
+  const esHoy      = fechaSel === hoyLocal();
+
+  let horasValidas = HORAS_POSIBLES;
+  if (esHoy) {
+    const ahora = new Date();
+    const horaActual = ahora.getHours() + ahora.getMinutes() / 60;
+    // Solo horas a partir de la próxima entera (ej. son 14:25 → desde 15:00)
+    horasValidas = HORAS_POSIBLES.filter(h => {
+      const [hh] = h.split(':');
+      return parseInt(hh, 10) > horaActual;
+    });
+  }
+
+  const prevValue = horaSel.value;
+  horaSel.innerHTML = horasValidas.length
+    ? horasValidas.map(h => `<option value="${h}">${h}</option>`).join('')
+    : '<option value="">Sin horas disponibles hoy</option>';
+  // Conservar selección previa si todavía es válida
+  if (horasValidas.includes(prevValue)) horaSel.value = prevValue;
+}
+
 function openNuevoPartidoModal() {
-  document.getElementById('np-fecha').value = activeDate;
+  const fechaInput = document.getElementById('np-fecha');
+  const hoy = hoyLocal();
+  // Bloquear seleccionar fechas pasadas en el calendario nativo
+  fechaInput.min = hoy;
+  // Si la fecha previa era pasada, resetear a hoy
+  if (!fechaInput.value || fechaInput.value < hoy) {
+    fechaInput.value = (activeDate && activeDate >= hoy) ? activeDate : hoy;
+  }
+  // Listener para re-filtrar horas cuando cambian la fecha
+  fechaInput.onchange = actualizarHorasDisponibles;
+  actualizarHorasDisponibles();
+
   document.getElementById('np-error').textContent = '';
   populateCanchaSelect();
   document.getElementById('modal-nuevo-partido').classList.add('open');
@@ -1551,6 +1601,16 @@ async function confirmarNuevoPartido() {
 
   if (!fecha || !canchaId || !hora) { errEl.textContent = 'Completa todos los campos'; return; }
   if (!precio || precio < 50) { errEl.textContent = 'El precio mínimo es $50 MXN'; return; }
+
+  // Validación final cliente-side (el backend también valida).
+  // Construir Date local para comparar con ahora.
+  const [yyyy, mm, dd] = fecha.split('-').map(Number);
+  const [hh, mi] = hora.split(':').map(Number);
+  const fechaHoraPartido = new Date(yyyy, mm - 1, dd, hh, mi || 0);
+  if (fechaHoraPartido.getTime() <= Date.now()) {
+    errEl.textContent = 'La fecha y hora deben ser futuras.';
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = 'Creando...';
