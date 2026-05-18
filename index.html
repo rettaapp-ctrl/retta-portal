@@ -1056,6 +1056,7 @@ window.selectDay             = selectDay;
 window.openModal             = openModal;
 window.closeModal            = closeModal;
 window.cancelarPartido       = cancelarPartido;
+window.openDescuentoComplejo = openDescuentoComplejo;
 window.openNuevoPartidoModal = openNuevoPartidoModal;
 window.closeNuevoPartidoModal= closeNuevoPartidoModal;
 window.confirmarNuevoPartido = confirmarNuevoPartido;
@@ -1495,11 +1496,58 @@ function openModal(p) {
   const footer = document.getElementById('modal-footer');
   if (p.status !== 'cancelado' && p.status !== 'finalizado') {
     footer.style.display = 'flex';
-    footer.innerHTML = `<button class="modal-btn-cancel" onclick="cancelarPartido('${safePid}')">Cancelar partido</button>`;
+    const descActual = Number(p.descuento_porcentaje || 0);
+    const descLabel  = descActual > 0
+      ? (descActual === 100 ? 'GRATIS' : `${descActual}% off`)
+      : 'Aplicar descuento';
+    footer.innerHTML = `
+      <button class="modal-btn-cancel" style="background:rgba(255,107,53,0.15);color:#FF6B35;border:1px solid #FF6B35;" onclick="openDescuentoComplejo('${safePid}',${safePrecio},${descActual})">
+        ${descLabel}
+      </button>
+      <button class="modal-btn-cancel" onclick="cancelarPartido('${safePid}')">Cancelar partido</button>
+    `;
   } else {
     footer.style.display = 'none';
   }
   document.getElementById('modal-partido').classList.add('open');
+}
+
+// ── Descuento: prompt + aplicar ──
+async function openDescuentoComplejo(partidoId, precio, descActual) {
+  const opciones = `
+0    → Sin descuento (precio normal)
+10   → 10% off
+25   → 25% off
+50   → 50% off
+75   → 75% off
+100  → GRATIS
+
+(${descActual > 0 ? 'Descuento vigente: ' + descActual + '%' : 'Sin descuento actual'})
+
+Ingresa el porcentaje (0-100):`;
+  const raw = prompt(opciones, descActual);
+  if (raw === null) return;
+  const pct = parseInt(raw, 10);
+  if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+    showToast('Porcentaje inválido (0-100)', 'error');
+    return;
+  }
+  try {
+    const r = await api(`/partidos/${partidoId}/descuento`, {
+      method: 'PATCH',
+      body:   { porcentaje: pct },
+    });
+    const msg = pct === 0
+      ? 'Descuento removido'
+      : pct === 100
+        ? '¡Partido GRATIS! ' + (r.notificados ? `${r.notificados} jugadores notificados` : '')
+        : `${pct}% aplicado · $${r.precio_original} → $${r.precio_final} ` + (r.notificados ? `· ${r.notificados} notificados` : '');
+    showToast(msg, 'success');
+    closeModal();
+    await loadPartidos();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 
 async function cancelarPartido(id) {
